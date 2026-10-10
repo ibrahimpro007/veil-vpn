@@ -56,6 +56,12 @@ jobs:
           "VERSION=$v" >> $env:GITHUB_ENV
           "version=$v" >> $env:GITHUB_OUTPUT
 
+      - name: Generate Windows platform shell (if missing)
+        run: |
+          if (-not (Test-Path "windows/runner")) {
+            flutter create --platforms=windows --org com.veil --project-name veil_client .
+          }
+
       - name: flutter build windows --release
         run: >
           flutter build windows --release
@@ -175,6 +181,12 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+
+      - name: Generate macOS platform shell (if missing)
+        run: |
+          if [ ! -d "macos/Runner.xcodeproj" ]; then
+            flutter create --platforms=macos --org com.veil --project-name veil_client .
+          fi
 
       - name: flutter build macos --release
         run: >
