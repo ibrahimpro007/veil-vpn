@@ -18,11 +18,12 @@
 ///   it on boot to re-offer connecting (documented in the manifest receiver).
 library;
 
+import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
 import 'package:win32/win32.dart';
-import 'package:ffi/ffi.dart';
 
 class PlatformSettings {
   PlatformSettings._();
@@ -37,8 +38,8 @@ class PlatformSettings {
     if (Platform.isAndroid) {
       if (enabled) {
         await _system.invokeMethod('openVpnSettings');
-        return 'Opened system VPN settings — enable 'Always-on VPN' and '
-            ''Block connections without VPN' for VeilVPN.';
+        return 'Opened system VPN settings — enable "Always-on VPN" and '
+            '"Block connections without VPN" for VeilVPN.';
       }
       return 'Kill switch off. (System Always-on settings are managed by you '
           'in Android VPN settings.)';
@@ -53,7 +54,7 @@ class PlatformSettings {
       await _system.invokeMethod('setKillSwitch', {'enabled': enabled});
       return enabled
           ? 'On-demand kill-switch rules installed. For full protection also '
-              'keep 'Connect on demand' enabled in System Settings → VPN.'
+              'keep "Connect on demand" enabled in System Settings → VPN.'
           : 'On-demand kill-switch rules removed.';
     }
     return 'Kill switch is not supported on this platform yet.';
@@ -85,61 +86,51 @@ class PlatformSettings {
   static String _setWindowsRunKey(bool enabled) {
     const subKey = r'Software\Microsoft\Windows\CurrentVersion\Run';
     final exePath = Platform.resolvedExecutable;
-    final subKeyPtr = subKey.toNativeUtf16();
-    final valueNamePtr = 'VeilVPN'.toNativeUtf16();
-    try {
-      final phkResult = calloc<HANDLE>();
+    return using((Arena arena) {
+      final subKeyPtr = subKey.toNativeUtf16(allocator: arena);
+      final valueNamePtr = 'VeilVPN'.toNativeUtf16(allocator: arena);
+      final phkResult = arena<HANDLE>();
+
+      var status = RegCreateKeyEx(
+        HKEY_CURRENT_USER,
+        subKeyPtr,
+        0,
+        nullptr,
+        REG_OPTION_NON_VOLATILE,
+        KEY_SET_VALUE,
+        nullptr,
+        phkResult,
+        nullptr,
+      );
+      if (status != ERROR_SUCCESS) {
+        return 'Could not update startup setting (registry error $status).';
+      }
+      final hKey = phkResult.value;
       try {
-        var status = RegCreateKeyEx(
-          HKEY_CURRENT_USER,
-          subKeyPtr,
-          0,
-          nullptr,
-          REG_OPTION_NON_VOLATILE,
-          KEY_SET_VALUE,
-          nullptr,
-          phkResult,
-          nullptr,
-        );
+        if (enabled) {
+          final value = '"$exePath" --minimized';
+          final dataPtr = value.toNativeUtf16(allocator: arena);
+          status = RegSetValueEx(
+            hKey,
+            valueNamePtr,
+            0,
+            REG_SZ,
+            dataPtr.cast<BYTE>(),
+            (value.length + 1) * 2,
+          );
+        } else {
+          status = RegDeleteValue(hKey, valueNamePtr);
+          if (status == ERROR_FILE_NOT_FOUND) status = ERROR_SUCCESS;
+        }
         if (status != ERROR_SUCCESS) {
           return 'Could not update startup setting (registry error $status).';
         }
-        final hKey = phkResult.value;
-        try {
-          if (enabled) {
-            final value = ''$exePath' --minimized';
-            final dataPtr = value.toNativeUtf16();
-            try {
-              status = RegSetValueEx(
-                hKey,
-                valueNamePtr,
-                0,
-                REG_SZ,
-                dataPtr.cast<BYTE>(),
-                (value.length + 1) * 2,
-              );
-            } finally {
-              free(dataPtr);
-            }
-          } else {
-            status = RegDeleteValue(hKey, valueNamePtr);
-            if (status == ERROR_FILE_NOT_FOUND) status = ERROR_SUCCESS;
-          }
-          if (status != ERROR_SUCCESS) {
-            return 'Could not update startup setting (registry error $status).';
-          }
-        } finally {
-          RegCloseKey(hKey);
-        }
       } finally {
-        free(phkResult);
+        RegCloseKey(hKey);
       }
       return enabled
           ? 'VeilVPN will start at login.'
           : 'VeilVPN will no longer start at login.';
-    } finally {
-      free(subKeyPtr);
-      free(valueNamePtr);
-    }
+    });
   }
 }

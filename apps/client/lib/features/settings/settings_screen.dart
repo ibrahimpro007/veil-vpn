@@ -161,7 +161,7 @@ class SettingsScreen extends ConsumerWidget {
   String _killSwitchSubtitle() {
     if (Platform.isAndroid) {
       return 'Opens system VPN settings so you can enable Always-on VPN + '
-          ''Block connections without VPN'.';
+          '"Block connections without VPN".';
     }
     if (Platform.isWindows) {
       return 'Blocks all traffic outside the tunnel via Windows Firewall.';

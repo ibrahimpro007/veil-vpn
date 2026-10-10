@@ -130,6 +130,12 @@ jobs:
         with:
           channel: stable
 
+      - name: Generate Android platform shell (if wrapper missing)
+        run: |
+          if [ ! -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
+            flutter create --platforms=android --org com.veil --project-name veil_client .
+          fi
+
       - name: Write release keystore from secrets
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

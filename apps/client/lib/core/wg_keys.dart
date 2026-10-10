@@ -37,14 +37,11 @@ Future<WgKeyPair> generateWgKeyPair() async {
 /// stored keypair is intact before registering the device).
 Future<String> publicKeyFromPrivate(String base64PrivateKey) async {
   final algorithm = X25519();
-  final keyPair = SimpleKeyPairData(
-    Uint8List.fromList(base64Decode(base64PrivateKey)),
-    publicKey: SimplePublicKey(
-      Uint8List(32),
-      type: KeyPairType.x25519,
-    ),
+  // For X25519 the 32-byte private key *is* the seed.
+  final keyPair = await algorithm.newKeyPairFromSeed(
+    base64Decode(base64PrivateKey),
   );
-  final publicKey = await algorithm.derivePublicKey(keyPair);
+  final publicKey = await keyPair.extractPublicKey();
   return base64Encode((publicKey as SimplePublicKey).bytes);
 }
 
