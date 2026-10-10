@@ -250,6 +250,8 @@ jobs:
       - name: Normalize asset names (stable download URLs)
         run: |
           cd release-assets
+          echo "Downloaded files:"
+          find . -type f | head -20
           # The download site links to fixed names via /releases/latest/download/.
           for f in VeilVPN-Setup-*.exe; do
             [ -e "$f" ] && [ "$f" != "VeilVPN-Setup.exe" ] && mv "$f" VeilVPN-Setup.exe
@@ -261,6 +263,13 @@ jobs:
             [ -e "$f" ] && [ "$f" != "VeilVPN.dmg" ] && mv "$f" VeilVPN.dmg
           done
           ls -la VeilVPN-*
+          # Fail loudly if any platform asset is missing — never ship a partial release.
+          for expected in VeilVPN-Setup.exe VeilVPN.apk VeilVPN.dmg; do
+            if [ ! -f "$expected" ]; then
+              echo "::error::Missing expected release asset: $expected"
+              exit 1
+            fi
+          done
 
       - name: SHA256SUMS.txt
         run: |
