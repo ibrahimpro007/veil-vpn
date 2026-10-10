@@ -1,7 +1,10 @@
 {
   "description": "VeilVPN shared contracts: Zod schemas, types, and the OpenAPI 3.1 spec. Imported by api, admin, and node-agent.",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "main": "./dist/index.js",
   "name": "@veil/shared",

@@ -156,7 +156,7 @@ function RegisterNodeModal({
     if (!parsed.success) {
       setFormError(
         parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .map((i: { path: (string | number)[]; message: string }) => `${i.path.join(".")}: ${i.message}`)
           .join(" · "),
       );
       return;
