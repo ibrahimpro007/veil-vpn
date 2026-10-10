@@ -25,8 +25,8 @@ android {
         // wireguard-android targets API 24+; keep 24 for desugaring safety.
         minSdk = 24
         targetSdk = 34
-        versionCode = flutterVersionCode.toInteger()
-        versionName = flutterVersionName
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     // Release keystore for direct-download builds. CI writes
