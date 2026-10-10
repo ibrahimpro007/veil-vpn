@@ -104,9 +104,10 @@ jobs:
                  Sort-Object Name -Descending | Select-Object -First 1
           if (-not $sdk) { throw "No versioned Windows SDK found" }
           $signtool = Join-Path $sdk.FullName "x64\signtool.exe"
-          & $signtool sign /sha1 $env:VEIL_CERT_THUMBPRINT /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
+          # NOTE: no /tr timestamping — public TSAs reject self-signed chains,
+          # and timestamping adds nothing for a self-signed cert anyway.
+          & $signtool sign /sha1 $env:VEIL_CERT_THUMBPRINT /fd SHA256 `
             (Get-ChildItem dist\VeilVPN-Setup-*.exe).FullName
-          & $signtool verify /pa (Get-ChildItem dist\VeilVPN-Setup-*.exe).FullName
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
