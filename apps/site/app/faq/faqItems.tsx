@@ -26,8 +26,8 @@ export const FAQ_ITEMS: FaqItem[] = [
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>Your account email address.</li>
           <li>
-            Your password as a PBKDF2-SHA256 (600,000 iterations) hash — we never see or store the
-            plaintext password.
+            Your password as a PBKDF2-SHA256 (600,000 iterations) hash — we
+            never see or store the plaintext password.
           </li>
           <li>
             Your devices&apos; WireGuard public keys (needed to let your devices

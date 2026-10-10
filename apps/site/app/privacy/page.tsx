@@ -50,7 +50,8 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Password hash</strong> — your password is stored only as an
-          PBKDF2-SHA256 (600,000 iterations) hash. We never see or store the plaintext password.
+          PBKDF2-SHA256 (600,000 iterations) hash. We never see or store the
+          plaintext password.
         </li>
         <li>
           <strong>Email verification / password-reset tokens</strong> —
