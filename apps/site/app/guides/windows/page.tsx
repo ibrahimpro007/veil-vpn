@@ -17,8 +17,7 @@ const STEPS: GuideStepData[] = [
         <a href="/download" className="text-emerald-300 hover:underline">
           download page
         </a>{" "}
-        (or the button above). Prefer the Microsoft Store-style package? Grab{" "}
-        <code>{RELEASE_ASSETS.windowsMsix}</code> instead and double-click it.
+        (or the button above) and double-click it to install.
       </p>
     ),
   },

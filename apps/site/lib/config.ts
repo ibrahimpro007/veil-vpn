@@ -9,7 +9,7 @@ export const APP_VERSION: string =
   process.env.NEXT_PUBLIC_APP_VERSION || "v0.1.0";
 
 export const GITHUB_REPO: string =
-  process.env.NEXT_PUBLIC_GITHUB_REPO || "YOUR_GITHUB_ORG/veil-vpn";
+  process.env.NEXT_PUBLIC_GITHUB_REPO || "ibrahimpro007/veil-vpn";
 
 /** True when GITHUB_REPO still holds the placeholder value. */
 export const GITHUB_REPO_IS_PLACEHOLDER =

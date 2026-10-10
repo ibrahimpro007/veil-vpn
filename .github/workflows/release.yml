@@ -215,6 +215,21 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Normalize asset names (stable download URLs)
+        run: |
+          cd release-assets
+          # The download site links to fixed names via /releases/latest/download/.
+          for f in VeilVPN-Setup-*.exe; do
+            [ -e "$f" ] && [ "$f" != "VeilVPN-Setup.exe" ] && mv "$f" VeilVPN-Setup.exe
+          done
+          for f in VeilVPN-*.apk; do
+            [ -e "$f" ] && [ "$f" != "VeilVPN.apk" ] && mv "$f" VeilVPN.apk
+          done
+          for f in VeilVPN-*.dmg; do
+            [ -e "$f" ] && [ "$f" != "VeilVPN.dmg" ] && mv "$f" VeilVPN.dmg
+          done
+          ls -la VeilVPN-*
+
       - name: SHA256SUMS.txt
         run: |
           cd release-assets
@@ -232,9 +247,9 @@ jobs:
 
             | File | Platform |
             | --- | --- |
-            | `VeilVPN-Setup-*.exe` | Windows 10/11 (x64) |
-            | `VeilVPN-*.apk` | Android 7.0+ |
-            | `VeilVPN-*.dmg` | macOS 12+ |
+            | `VeilVPN-Setup.exe` | Windows 10/11 (x64) |
+            | `VeilVPN.apk` | Android 7.0+ |
+            | `VeilVPN.dmg` | macOS 12+ |
 
             **Signing notices (expected):**
             - Windows: self-signed certificate — SmartScreen will warn on first install ("Unknown publisher"). Verify the SHA-256 in `SHA256SUMS.txt` before installing.

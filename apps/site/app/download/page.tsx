@@ -8,9 +8,6 @@ const OPTIONS: DownloadOption[] = [
   {
     os: "Windows",
     asset: RELEASE_ASSETS.windowsExe,
-    altAssets: [
-      { label: "MSIX package (.msix)", asset: RELEASE_ASSETS.windowsMsix },
-    ],
     icon: "🪟",
     description:
       "Windows 10 / 11 (64-bit). Installer with kill switch, split tunneling, and auto-updates.",
