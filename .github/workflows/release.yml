@@ -100,7 +100,9 @@ jobs:
       - name: Sign installer with signtool (self-signed)
         run: |
           $sdk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory |
+                 Where-Object { $_.Name -match '^\d+\.\d+\.' } |
                  Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) { throw "No versioned Windows SDK found" }
           $signtool = Join-Path $sdk.FullName "x64\signtool.exe"
           & $signtool sign /sha1 $env:VEIL_CERT_THUMBPRINT /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
             (Get-ChildItem dist\VeilVPN-Setup-*.exe).FullName
@@ -134,6 +136,9 @@ jobs:
         run: |
           if [ ! -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
             flutter create --platforms=android --org com.veil --project-name veil_client .
+            # flutter create generates Kotlin DSL (.kts); this project uses
+            # Groovy (.gradle) — remove the .kts files to avoid conflicts.
+            find android -name "*.kts" -delete
           fi
 
       - name: Write release keystore from secrets
