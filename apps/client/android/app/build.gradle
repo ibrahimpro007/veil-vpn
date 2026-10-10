@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.veil.vpn"
-    compileSdk = 34
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -24,7 +24,7 @@ android {
         applicationId = "com.veil.vpn"
         // wireguard-android targets API 24+; keep 24 for desugaring safety.
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
