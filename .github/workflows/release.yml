@@ -207,14 +207,22 @@ jobs:
           # Developer Program). Gatekeeper will warn on first launch; users
           # right-click > Open to run it.
           echo "::warning::macOS build is ad-hoc signed only (no notarization). Gatekeeper will warn on first launch."
-          codesign --force --deep -s - "build/macos/Build/Products/Release/VeilVPN.app"
-          codesign --verify --verbose "build/macos/Build/Products/Release/VeilVPN.app"
+          APP_PATH=$(find "build/macos/Build/Products/Release" -maxdepth 1 -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app bundle found in build/macos/Build/Products/Release/"
+            ls -la "build/macos/Build/Products/Release/" || true
+            exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+          codesign --force --deep -s - "$APP_PATH"
+          codesign --verify --verbose "$APP_PATH"
 
       - name: Create DMG
         run: |
           mkdir -p dist
           hdiutil create -volname "VeilVPN" \
-            -srcfolder "build/macos/Build/Products/Release/VeilVPN.app" \
+            -srcfolder "${{ env.APP_PATH }}" \
             -ov -format UDZO "dist/VeilVPN-${{ github.ref_name }}.dmg"
 
       - name: Upload artifact

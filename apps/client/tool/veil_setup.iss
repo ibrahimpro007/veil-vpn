@@ -17,6 +17,7 @@
 #define HelperExe "veil_helper.exe"
 
 [Setup]
+AppName={#AppName}
 AppId={{B7C3A91E-4D2F-4E6A-9C1B-7F3E8A2D5C60}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
