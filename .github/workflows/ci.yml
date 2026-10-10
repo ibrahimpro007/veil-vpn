@@ -1,0 +1,100 @@
+# VeilVPN CI — JS/TS workspaces, Go node agent, Flutter client.
+# Free tier only: ubuntu/windows/macos GitHub-hosted runners.
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  js:
+    name: JS/TS (build, typecheck, lint, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.7.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (tsc --noEmit across packages)
+        run: pnpm turbo run typecheck
+
+      - name: Lint
+        run: pnpm turbo run lint
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Test (vitest — apps/api)
+        run: pnpm turbo run test
+
+      - name: Shell syntax check (infra scripts)
+        run: bash -n infra/scripts/smoke-test.sh && bash -n infra/scripts/backup-d1.sh && bash -n infra/cloud-init/node-bootstrap.sh
+
+  go:
+    name: Go node agent (vet + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/node-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+          cache-dependency-path: apps/node-agent/go.sum
+
+      - name: gofmt check
+        run: test -z "$(gofmt -l .)"
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...
+
+  flutter:
+    name: Flutter client (analyze + test, if Flutter available)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Flutter
+        id: flutter-check
+        run: |
+          if command -v flutter >/dev/null 2>&1; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notice — Flutter not installed
+        if: steps.flutter-check.outputs.present == 'false'
+        run: |
+          echo "::notice::Flutter SDK is not installed on this runner; skipping flutter analyze/test. Install Flutter locally to run client checks (see apps/client/README.md)."
+
+      - name: flutter analyze
+        if: steps.flutter-check.outputs.present == 'true'
+        run: flutter analyze
+
+      - name: flutter test
+        if: steps.flutter-check.outputs.present == 'true'
+        run: flutter test

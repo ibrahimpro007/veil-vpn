@@ -1,0 +1,57 @@
+# VeilVPN node agent — systemd unit.
+#
+# Installed by infra/cloud-init/node-bootstrap.sh to /etc/systemd/system/.
+# Configuration comes from /etc/veil-agent/agent.env (0600, root:veil).
+#
+# The agent needs CAP_NET_ADMIN to drive WireGuard via netlink (wg set).
+# Everything else is locked down: read-only filesystem, no new privileges,
+# private /tmp, restricted address families.
+
+[Unit]
+Description=VeilVPN node agent (WireGuard peer sync)
+Documentation=https://github.com/veil/veil-vpn
+Wants=network-online.target wg-quick@wg0.service
+After=network-online.target wg-quick@wg0.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=veil
+Group=veil
+EnvironmentFile=/etc/veil-agent/agent.env
+ExecStart=/usr/local/bin/veil-agent
+Restart=on-failure
+RestartSec=5s
+
+# --- hardening ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=false
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+RemoveIPC=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+
+# WireGuard netlink access. The agent only ever needs CAP_NET_ADMIN.
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+
+# Writable only where the agent persists desired peer state.
+ReadWritePaths=/var/lib/veil-agent
+
+# journald captures stdout; the bootstrap sets Storage=volatile so logs
+# live only in RAM (privacy: no persistent logs on the node).
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,1356 @@
+openapi: 3.1.0
+info:
+  title: VeilVPN API
+  version: 1.0.0
+  description: |
+    Public and admin API for VeilVPN, a no-logs VPN product.
+    All times are Unix epoch seconds. All requests must include the
+    X-Request-Id header handling described below.
+servers:
+  - url: https://api.veil.example/v1
+    description: Production API base (v1 prefix is part of all paths below)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+  - name: me
+  - name: devices
+  - name: nodes
+  - name: connect
+  - name: subscription
+  - name: billing
+  - name: webhooks
+  - name: announcements
+  - name: gdpr
+  - name: admin
+
+paths:
+  # ---------------- auth ----------------
+  /v1/auth/register:
+    post:
+      tags: [auth]
+      security: []
+      summary: Register a new account
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12, maxLength: 256 }
+      responses:
+        "201":
+          description: >
+            Always 201 with the same shape, whether or not the email was
+            already registered (anti-enumeration). A verification email is
+            queued only for genuinely new accounts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: string }
+                  emailVerificationRequired: { type: boolean }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: Log in
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Auth tokens
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthTokens" }
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/refresh:
+    post:
+      tags: [auth]
+      security: []
+      summary: Rotate refresh token (rotation + reuse detection via family)
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthTokens" }
+        "401":
+          description: Invalid, revoked, or reused token (reuse revokes family)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke the current refresh token
+      operationId: logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "204": { description: Logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/verify-email:
+    post:
+      tags: [auth]
+      security: []
+      summary: Verify email with token from registration email
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified: { type: boolean }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/forgot-password:
+    post:
+      tags: [auth]
+      security: []
+      summary: Request a password-reset email (always 200 to avoid enumeration)
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Reset email queued if account exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/reset-password:
+    post:
+      tags: [auth]
+      security: []
+      summary: Reset password with token from reset email
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 12, maxLength: 256 }
+      responses:
+        "200":
+          description: Password changed; all refresh tokens revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  # ---------------- me ----------------
+  /v1/me:
+    get:
+      tags: [me]
+      summary: Current user profile
+      operationId: getMe
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [me]
+      summary: Update profile (display name only; null clears it)
+      operationId: updateMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 100, nullable: true }
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------- devices ----------------
+  /v1/devices:
+    get:
+      tags: [devices]
+      summary: List my devices
+      operationId: listDevices
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices:
+                    type: array
+                    items: { $ref: "#/components/schemas/Device" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [devices]
+      summary: Register a device (counts against plan device limit)
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, platform, wgPublicKey]
+              properties:
+                name: { type: string, maxLength: 100 }
+                platform:
+                  type: string
+                  enum: [windows, android, macos, linux, ios]
+                wgPublicKey:
+                  type: string
+                  minLength: 44
+                  maxLength: 44
+                  description: 44-char base64 WireGuard public key
+      responses:
+        "201":
+          description: Device registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Device" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Device limit reached for current plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "409":
+          description: Public key already registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/devices/{id}:
+    delete:
+      tags: [devices]
+      summary: Delete a device (also removes its peer)
+      operationId: deleteDevice
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      responses:
+        "204": { description: Device deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------- nodes ----------------
+  /v1/nodes:
+    get:
+      tags: [nodes]
+      security: []
+      summary: Public node list (country/city only — never precise load)
+      operationId: listNodes
+      responses:
+        "200":
+          description: Active and draining nodes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items: { $ref: "#/components/schemas/VpnNodePublic" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  # ---------------- connect ----------------
+  /v1/connect:
+    post:
+      tags: [connect]
+      summary: Get a WireGuard peer config for a device (optionally pinned to a node)
+      operationId: connect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId]
+              properties:
+                deviceId: { type: string }
+                nodeId: { type: string }
+      responses:
+        "200":
+          description: WireGuard peer config
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WireGuardPeerConfig" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402":
+          description: No active entitlement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/disconnect:
+    post:
+      tags: [connect]
+      summary: Remove the peer for a device (optional; peers expire automatically)
+      operationId: disconnect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId]
+              properties:
+                deviceId: { type: string }
+      responses:
+        "204": { description: Peer removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------- subscription ----------------
+  /v1/subscription:
+    get:
+      tags: [subscription]
+      summary: Current subscription + entitlement
+      operationId: getSubscription
+      responses:
+        "200":
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription:
+                    $ref: "#/components/schemas/Subscription"
+                  entitlement:
+                    $ref: "#/components/schemas/Entitlement"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------- billing ----------------
+  /v1/billing/checkout:
+    post:
+      tags: [billing]
+      summary: Create a checkout session for a plan
+      operationId: createCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planId, provider]
+              properties:
+                planId: { type: string }
+                provider: { type: string, enum: [stripe, lemonsqueezy] }
+      responses:
+        "200":
+          description: Checkout URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl: { type: string, format: uri }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/billing/portal:
+    post:
+      tags: [billing]
+      summary: Create a customer billing portal session
+      operationId: createPortal
+      responses:
+        "200":
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portalUrl: { type: string, format: uri }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: No billing customer on file
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  # ---------------- webhooks ----------------
+  /v1/webhooks/stripe:
+    post:
+      tags: [webhooks]
+      security: []
+      summary: Stripe webhook receiver (signature-verified, idempotent)
+      operationId: stripeWebhook
+      responses:
+        "200": { description: Event accepted }
+        "400": { description: Invalid signature }
+  /v1/webhooks/lemonsqueezy:
+    post:
+      tags: [webhooks]
+      security: []
+      summary: LemonSqueezy webhook receiver (signature-verified, idempotent)
+      operationId: lemonSqueezyWebhook
+      responses:
+        "200": { description: Event accepted }
+        "400": { description: Invalid signature }
+  /v1/webhooks/play:
+    post:
+      tags: [webhooks]
+      security: []
+      summary: Google Play RTDN receiver
+      operationId: playWebhook
+      responses:
+        "200": { description: Event accepted }
+        "400": { description: Invalid signature }
+  /v1/webhooks/storekit:
+    post:
+      tags: [webhooks]
+      security: []
+      summary: Apple App Store Server Notifications receiver
+      operationId: storeKitWebhook
+      responses:
+        "200": { description: Event accepted }
+        "400": { description: Invalid signature }
+
+  # ---------------- health ----------------
+  /v1/health:
+    get:
+      tags: [health]
+      security: []
+      summary: Liveness probe
+      operationId: health
+      responses:
+        "200":
+          description: Worker is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  service: { type: string }
+                  time: { type: integer }
+
+  # ---------------- announcements ----------------
+  /v1/announcements:
+    get:
+      tags: [announcements]
+      security: []
+      summary: Active public announcements
+      operationId: listAnnouncements
+      responses:
+        "200":
+          description: Announcements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  announcements:
+                    type: array
+                    items: { $ref: "#/components/schemas/Announcement" }
+
+  # ---------------- gdpr ----------------
+  /v1/gdpr/export:
+    get:
+      tags: [gdpr]
+      summary: Export my data (JSON)
+      operationId: exportData
+      responses:
+        "200":
+          description: Data export
+          content:
+            application/json:
+              schema: { type: object }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/gdpr/account:
+    delete:
+      tags: [gdpr]
+      summary: Delete my account (hard delete PII; audit entries keep IDs only)
+      operationId: deleteAccount
+      responses:
+        "204": { description: Account deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------- admin ----------------
+  /admin/auth/login:
+    post:
+      tags: [admin]
+      security: []
+      summary: Admin login step 1 (email + password) — returns a TOTP challenge
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Password accepted; TOTP required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totpRequired: { type: boolean }
+                  challengeToken: { type: string }
+                  expiresIn: { type: integer }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/auth/totp-verify:
+    post:
+      tags: [admin]
+      security: []
+      summary: Admin login step 2 (TOTP) — returns a 12h admin session JWT
+      operationId: adminTotpVerify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeToken, code]
+              properties:
+                challengeToken: { type: string }
+                code: { type: string }
+      responses:
+        "200":
+          description: Admin session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  expiresIn: { type: integer }
+                  role: { type: string, enum: [owner, support, read-only] }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/users:
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Search users
+      operationId: adminSearchUsers
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string, default: "" }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, suspended, banned, deleted] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{id}/suspend:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Suspend a user (requires reason; owner/support roles)
+      operationId: adminSuspendUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: User suspended
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users/{id}/ban:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Ban a user (owner role only)
+      operationId: adminBanUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: User banned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users/{id}/unsuspend:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Unsuspend a user (owner/support roles)
+      operationId: adminUnsuspendUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: User re-activated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/devices/{id}/revoke:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Revoke a device (removes its peer)
+      operationId: adminRevokeDevice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "204": { description: Device revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/grants:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Grant complimentary subscription time (owner/support)
+      operationId: adminGrant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, planId, days, reason]
+              properties:
+                userId: { type: string }
+                planId: { type: string }
+                days: { type: integer, minimum: 1, maximum: 3650 }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: Grant recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Subscription" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/subscriptions:
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: List subscriptions with filters
+      operationId: adminListSubscriptions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [trialing, active, past_due, canceled, expired]
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Paginated subscriptions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Subscription" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/payment-events:
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: List payment events (payload hashes only, never raw payloads)
+      operationId: adminListPaymentEvents
+      parameters:
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [stripe, lemonsqueezy, play, storekit, comp]
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Paginated payment events
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/PaymentEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/nodes:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Register an already-provisioned node (owner role; starts disabled)
+      operationId: adminRegisterNode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                [
+                  region,
+                  countryCode,
+                  city,
+                  endpoint,
+                  wgPublicKey,
+                  capacity,
+                  ipPoolCidr,
+                  dnsIp,
+                ]
+              properties:
+                region: { type: string, example: "eu-west" }
+                countryCode:
+                  { type: string, minLength: 2, maxLength: 2, example: "DE" }
+                city: { type: string, example: "Frankfurt" }
+                endpoint:
+                  {
+                    type: string,
+                    pattern: "^[a-zA-Z0-9.-]+:\\d{1,5}$",
+                    example: "203.0.113.10:51820",
+                  }
+                wgPublicKey:
+                  {
+                    type: string,
+                    description: "WireGuard server public key (44-char base64)",
+                  }
+                capacity: { type: integer, minimum: 1, example: 250 }
+                ipPoolCidr: { type: string, example: "10.7.0.0/24" }
+                dnsIp: { type: string, format: ipv4, example: "10.7.0.1" }
+                sortOrder: { type: integer, default: 0 }
+      responses:
+        "201":
+          description: Registered node (status disabled — enable via PATCH after verification)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VpnNodeAdmin" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: List all nodes (internal detail; precise load NOT exposed)
+      operationId: adminListNodes
+      responses:
+        "200":
+          description: Nodes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items: { $ref: "#/components/schemas/VpnNodeAdmin" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/nodes/{id}:
+    patch:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Update node status/capacity (owner role)
+      operationId: adminUpdateNode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, draining, disabled] }
+                capacity: { type: integer, minimum: 0 }
+                sortOrder: { type: integer }
+                dnsIp: { type: string, format: ipv4 }
+      responses:
+        "200":
+          description: Updated node
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VpnNodeAdmin" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/announcements:
+    post:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Create an announcement (owner/support)
+      operationId: adminCreateAnnouncement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string, maxLength: 200 }
+                body: { type: string, maxLength: 5000 }
+                startsAt: { type: integer }
+                endsAt: { type: integer }
+      responses:
+        "201":
+          description: Announcement created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Announcement" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: List all announcements (any admin role)
+      operationId: adminListAnnouncements
+      responses:
+        "200":
+          description: Announcements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  announcements:
+                    type: array
+                    items: { $ref: "#/components/schemas/Announcement" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/announcements/{id}:
+    delete:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Delete an announcement (owner/support)
+      operationId: adminDeleteAnnouncement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Announcement deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/audit-logs:
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: List hash-chained audit logs
+      operationId: adminListAuditLogs
+      parameters:
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AuditLogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/audit-logs/verify:
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Verify the audit-log hash chain integrity
+      operationId: adminVerifyAuditLogs
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, checked]
+                properties:
+                  valid: { type: boolean }
+                  checked: { type: integer }
+                  brokenAtId: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/export/users.csv:
+    get:
+      tags: [admin]
+      security: [adminSession: []]
+      summary: Export users as CSV (owner role; streamed)
+      operationId: adminExportUsersCsv
+      responses:
+        "200":
+          description: CSV download
+          content:
+            text/csv:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Short-lived access JWT. Returned by /v1/auth/login and /v1/auth/refresh.
+        Send as `Authorization: Bearer <token>`.
+    adminSession:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Admin session JWT for /admin/* routes. Issued by the admin login
+        flow (admin app only, with TOTP), role-encoded in claims.
+
+  parameters:
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Forbidden:
+      description: Authenticated but not permitted (role or entitlement)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    ValidationError:
+      description: Request failed schema validation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: Seconds until the limit resets
+        X-Request-Id:
+          schema: { type: string }
+          description: Correlation ID for this request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+
+  headers:
+    RequestId:
+      description: Correlation ID echoed on every response
+      schema: { type: string }
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error, requestId]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: rate_limited }
+            message:
+              { type: string, example: "Too many requests. Try again later." }
+        requestId: { type: string }
+
+    Paginated:
+      type: object
+      required: [data, page, pageSize, total]
+      properties:
+        data: { type: array, items: {} }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
+
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: integer }
+
+    UserProfile:
+      type: object
+      required: [id, email, emailVerified, status, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        emailVerified: { type: boolean }
+        status: { type: string, enum: [active, suspended, banned, deleted] }
+        createdAt: { type: integer }
+
+    Device:
+      type: object
+      required: [id, name, platform, wgPublicKey, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        platform: { type: string, enum: [windows, android, macos, linux, ios] }
+        wgPublicKey: { type: string }
+        lastSeenDay:
+          { type: integer, nullable: true, description: Day granularity only }
+        createdAt: { type: integer }
+
+    VpnNodePublic:
+      type: object
+      required: [id, region, countryCode, city, endpoint, status, sortOrder]
+      properties:
+        id: { type: string }
+        region: { type: string }
+        countryCode: { type: string, minLength: 2, maxLength: 2 }
+        city: { type: string }
+        endpoint: { type: string }
+        status: { type: string, enum: [active, draining, disabled] }
+        sortOrder: { type: integer }
+
+    VpnNodeAdmin:
+      allOf:
+        - $ref: "#/components/schemas/VpnNodePublic"
+        - type: object
+          required:
+            [wgPublicKey, capacity, ipPoolCidr, dnsIp, createdAt, updatedAt]
+          properties:
+            wgPublicKey: { type: string }
+            capacity: { type: integer }
+            ipPoolCidr: { type: string }
+            dnsIp: { type: string }
+            createdAt: { type: integer }
+            updatedAt: { type: integer }
+
+    WireGuardPeerConfig:
+      type: object
+      required:
+        [
+          address,
+          subnet,
+          serverPublicKey,
+          endpoint,
+          dns,
+          allowedIps,
+          node,
+          expiresAt,
+        ]
+      properties:
+        address: { type: string }
+        subnet: { type: string }
+        serverPublicKey: { type: string }
+        endpoint: { type: string }
+        dns: { type: string }
+        allowedIps:
+          type: array
+          items: { type: string }
+        node:
+          type: object
+          required: [id, countryCode, city, region]
+          properties:
+            id: { type: string }
+            countryCode: { type: string }
+            city: { type: string }
+            region: { type: string }
+        expiresAt: { type: integer }
+
+    Entitlement:
+      type: object
+      required: [userId, planSlug, status, deviceLimit, canConnect]
+      properties:
+        userId: { type: string }
+        planSlug: { type: string }
+        status:
+          {
+            type: string,
+            enum: [trialing, active, past_due, canceled, expired],
+          }
+        deviceLimit: { type: integer }
+        canConnect: { type: boolean }
+        currentPeriodEnd: { type: integer, nullable: true }
+        graceUntil: { type: integer, nullable: true }
+
+    Subscription:
+      type: object
+      required: [id, planId, planSlug, status, provider]
+      properties:
+        id: { type: string }
+        planId: { type: string }
+        planSlug: { type: string }
+        status:
+          {
+            type: string,
+            enum: [trialing, active, past_due, canceled, expired],
+          }
+        currentPeriodEnd: { type: integer, nullable: true }
+        graceUntil: { type: integer, nullable: true }
+        provider:
+          { type: string, enum: [stripe, lemonsqueezy, play, storekit, comp] }
+
+    Plan:
+      type: object
+      required:
+        [id, name, slug, priceCents, currency, interval, deviceLimit, active]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        priceCents: { type: integer }
+        currency: { type: string }
+        interval: { type: string, enum: [month, year] }
+        deviceLimit: { type: integer }
+        active: { type: boolean }
+
+    Announcement:
+      type: object
+      required: [id, title, body, createdAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        startsAt: { type: integer, nullable: true }
+        endsAt: { type: integer, nullable: true }
+        createdAt: { type: integer }
+
+    PaymentEvent:
+      type: object
+      required: [id, provider, providerEventId, type, payloadHash, createdAt]
+      properties:
+        id: { type: string }
+        provider:
+          { type: string, enum: [stripe, lemonsqueezy, play, storekit, comp] }
+        providerEventId: { type: string }
+        type: { type: string }
+        payloadHash:
+          type: string
+          description: sha256 hex of raw payload — raw payload is never stored
+        amountCents: { type: integer, nullable: true }
+        currency: { type: string, nullable: true }
+        processedAt: { type: integer, nullable: true }
+        createdAt: { type: integer }
+
+    AuditLogEntry:
+      type: object
+      required: [id, prevHash, hash, action, entity, createdAt]
+      properties:
+        id: { type: integer }
+        prevHash: { type: string }
+        hash: { type: string }
+        actorAdminId: { type: string, nullable: true }
+        actorUserId: { type: string, nullable: true }
+        action: { type: string }
+        entity: { type: string }
+        entityId: { type: string, nullable: true }
+        detail: { type: string, nullable: true }
+        createdAt: { type: integer }

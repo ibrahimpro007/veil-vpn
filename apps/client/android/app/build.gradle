@@ -1,0 +1,85 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.veil.vpn"
+    compileSdk = 34
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        // Required by com.wireguard.android:tunnel (Java 8+ APIs).
+        coreLibraryDesugaringEnabled = true
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId = "com.veil.vpn"
+        // wireguard-android targets API 24+; keep 24 for desugaring safety.
+        minSdk = 24
+        targetSdk = 34
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+    }
+
+    // Release keystore for direct-download builds. CI writes
+    // android/key.properties from the ANDROID_KEYSTORE_* secrets:
+    //   storeFile=/path/to/veil-release.keystore
+    //   storePassword=...
+    //   keyAlias=veil
+    //   keyPassword=...
+    // Absent key.properties (local dev) -> debug signing.
+    def keystoreProperties = new Properties()
+    def keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+    signingConfigs {
+        release {
+            storeFile keystorePropertiesFile.exists() ? file(keystoreProperties['storeFile']) : null
+            storePassword keystoreProperties['storePassword']
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            // Direct-download APKs are signed with the release keystore written
+            // by CI (android/key.properties); local dev falls back to debug.
+            signingConfig = signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    // FLAVOR dart-define values: direct (GitHub Releases) | play (Google Play,
+    // SKIPPED on the $0 budget — store billing stays inactive without store
+    // accounts; see lib/billing/store_billing.dart).
+    flavorDimensions "store"
+    productFlavors {
+        direct {
+            dimension "store"
+        }
+        play {
+            dimension "store"
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    // Official WireGuard tunnel library (userspace GoBackend, no root).
+    implementation "com.wireguard.android:tunnel:1.0.20230706"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.3"
+}

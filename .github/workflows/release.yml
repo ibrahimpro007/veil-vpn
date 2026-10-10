@@ -1,0 +1,245 @@
+# VeilVPN release — builds signed client installers on tag v* and publishes
+# them to the GitHub Release. All on free GitHub-hosted runners.
+#
+# SIGNING REALITY ($0 budget, no CA certificates):
+#  - Windows: self-signed PFX generated in-workflow, signed with signtool.
+#    Windows SmartScreen WILL warn ("Unknown publisher") on first install.
+#    This is expected and documented on the download page.
+#  - Android: signed with a keystore stored as GitHub Secrets
+#    (ANDROID_KEYSTORE_BASE64 / _PASSWORD / _KEY_ALIAS / _KEY_PASSWORD).
+#  - macOS: ad-hoc codesign (`codesign -s -`). Apple notarization is SKIPPED
+#    (requires the $99/yr Apple Developer Program); Gatekeeper will warn on
+#    first launch — right-click > Open, or document your own notarization.
+#
+# Required repository secrets:
+#   ANDROID_KEYSTORE_BASE64  - base64 of the release keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+# Optional repository variables (vars.*):
+#   API_BASE_URL   - default https://api.veil.example
+#   GITHUB_REPO    - default github.repository
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  API_BASE_URL: ${{ vars.API_BASE_URL || 'https://api.veil.example' }}
+  GITHUB_REPO: ${{ vars.GITHUB_REPO || github.repository }}
+
+jobs:
+  windows:
+    name: Windows installer (.exe, Inno Setup, self-signed)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: apps/client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          "VERSION=$v" >> $env:GITHUB_ENV
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: flutter build windows --release
+        run: >
+          flutter build windows --release
+          --dart-define=API_BASE_URL=$env:API_BASE_URL
+          --dart-define=FLAVOR=direct
+          --dart-define=GITHUB_REPO=$env:GITHUB_REPO
+
+      - name: Build tunnel helper (dart compile exe)
+        run: |
+          New-Item -ItemType Directory -Force -Path build\helper | Out-Null
+          dart compile exe windows\helper\veil_helper.dart -o build\helper\veil_helper.exe
+
+      - name: Generate self-signed code-signing certificate
+        run: |
+          $cert = New-SelfSignedCertificate `
+            -Subject "CN=VeilVPN (self-signed), O=VeilVPN" `
+            -Type CodeSigningCert `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -NotAfter (Get-Date).AddYears(3)
+          $pwd = ConvertTo-SecureString -String ([Guid]::NewGuid().ToString()) -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "$env:RUNNER_TEMP\veil-selfsigned.pfx" -Password $pwd | Out-Null
+          # Thumbprint passed to the sign step via env (cert lives in the user store).
+          "VEIL_CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
+          "::warning::Windows build is signed with a SELF-SIGNED certificate. SmartScreen will warn on first install."
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compile installer
+        env:
+          VEIL_VERSION: ${{ env.VERSION }}
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" tool\veil_setup.iss
+          Get-ChildItem dist\*.exe
+
+      - name: Sign installer with signtool (self-signed)
+        run: |
+          $sdk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory |
+                 Sort-Object Name -Descending | Select-Object -First 1
+          $signtool = Join-Path $sdk.FullName "x64\signtool.exe"
+          & $signtool sign /sha1 $env:VEIL_CERT_THUMBPRINT /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
+            (Get-ChildItem dist\VeilVPN-Setup-*.exe).FullName
+          & $signtool verify /pa (Get-ChildItem dist\VeilVPN-Setup-*.exe).FullName
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VeilVPN-Setup-Windows
+          path: apps/client/dist/VeilVPN-Setup-*.exe
+
+  android:
+    name: Android APK (direct flavor, keystore from secrets)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Write release keystore from secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set. Generate one locally: keytool -genkeypair -keystore veil-release.jks -alias veil -keyalg RSA -keysize 2048 -validity 10950"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/veil-release.keystore
+          cat > android/key.properties <<EOF
+          storeFile=$PWD/android/veil-release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          chmod 600 android/key.properties
+
+      - name: flutter build apk --release --flavor direct
+        run: >
+          flutter build apk --release --flavor direct
+          --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+          --dart-define=FLAVOR=direct
+          --dart-define=GITHUB_REPO=${{ env.GITHUB_REPO }}
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-direct-release.apk "dist/VeilVPN-${{ github.ref_name }}.apk"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VeilVPN-Android
+          path: apps/client/dist/VeilVPN-*.apk
+
+  macos:
+    name: macOS app + DMG (ad-hoc signature, no notarization)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: flutter build macos --release
+        run: >
+          flutter build macos --release
+          --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+          --dart-define=FLAVOR=direct
+          --dart-define=GITHUB_REPO=${{ env.GITHUB_REPO }}
+
+      - name: Ad-hoc codesign
+        run: |
+          # Ad-hoc signature only. Apple notarization is SKIPPED ($99/yr Apple
+          # Developer Program). Gatekeeper will warn on first launch; users
+          # right-click > Open to run it.
+          echo "::warning::macOS build is ad-hoc signed only (no notarization). Gatekeeper will warn on first launch."
+          codesign --force --deep -s - "build/macos/Build/Products/Release/VeilVPN.app"
+          codesign --verify --verbose "build/macos/Build/Products/Release/VeilVPN.app"
+
+      - name: Create DMG
+        run: |
+          mkdir -p dist
+          hdiutil create -volname "VeilVPN" \
+            -srcfolder "build/macos/Build/Products/Release/VeilVPN.app" \
+            -ov -format UDZO "dist/VeilVPN-${{ github.ref_name }}.dmg"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VeilVPN-macOS
+          path: apps/client/dist/VeilVPN-*.dmg
+
+  publish:
+    name: Publish GitHub Release
+    needs: [windows, android, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: SHA256SUMS.txt
+        run: |
+          cd release-assets
+          sha256sum VeilVPN-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/VeilVPN-*
+          body: |
+            ## VeilVPN ${{ github.ref_name }}
+
+            Direct-download builds. No app stores are used.
+
+            | File | Platform |
+            | --- | --- |
+            | `VeilVPN-Setup-*.exe` | Windows 10/11 (x64) |
+            | `VeilVPN-*.apk` | Android 7.0+ |
+            | `VeilVPN-*.dmg` | macOS 12+ |
+
+            **Signing notices (expected):**
+            - Windows: self-signed certificate — SmartScreen will warn on first install ("Unknown publisher"). Verify the SHA-256 in `SHA256SUMS.txt` before installing.
+            - macOS: ad-hoc signature, not notarized — Gatekeeper will warn on first launch; right-click → Open.
+            - Android: signed with the VeilVPN release key; verify the SHA-256 before installing.
+
+            WireGuard tunnel adapters are exercised on real devices after each
+            release; see the leak-test checklist in `docs/LEAK_TESTS.md`.

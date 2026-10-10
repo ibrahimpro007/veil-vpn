@@ -1,0 +1,28 @@
+{
+  "description": "VeilVPN API — Cloudflare Worker (Hono + D1 + KV). Full /v1 + /admin implementation: auth, devices, connect, billing webhooks, GDPR, admin console API, crons.",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
+    "wrangler": "^3.80.3"
+  },
+  "name": "@veil/api",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "lint": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.mjs\""
+  },
+  "version": "0.1.0",
+  "dependencies": {
+    "@veil/shared": "file:../../packages/shared",
+    "drizzle-orm": "^0.44.0",
+    "hono": "^4.7.0",
+    "zod": "^3.25.76"
+  }
+}

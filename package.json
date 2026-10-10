@@ -1,0 +1,28 @@
+{
+  "description": "VeilVPN — production-grade no-logs VPN product (monorepo)",
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "turbo": "^2.4.4",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "name": "veil-vpn",
+  "packageManager": "pnpm@9.7.1",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "db:backup": "bash infra/scripts/backup-d1.sh",
+    "db:migrate": "wrangler d1 migrations apply veil-vpn-db",
+    "db:seed": "wrangler d1 execute veil-vpn-db --file=infra/d1/seed.sql",
+    "dev": "turbo run dev",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "test:all": "turbo run test && (command -v go >/dev/null 2>&1 && (cd apps/node-agent && go test ./...) || echo \"go not installed — skipping Go tests\")"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

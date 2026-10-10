@@ -1,0 +1,44 @@
+# VeilVPN API — Cloudflare Worker (wrangler.toml)
+# Full Worker code lands in apps/api in Phase 2. This file pins the
+# bindings, vars, and cron schedules Phase 2+ must follow.
+#
+# Secrets are NEVER committed here. Set each with:
+#   wrangler secret put <NAME>
+# (see apps/api/.env.example for the full list and descriptions)
+
+name = "veil-api"
+# Entry point is apps/api/src/index.ts (config lives here in infra/).
+main = "../apps/api/src/index.ts"
+compatibility_date = "2026-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+workers_dev = true
+# route = { pattern = "api.veil.example/*", zone_name = "veil.example" }  # set when custom domain is live
+
+# ---- D1: primary relational store ----
+[[d1_databases]]
+binding = "DB"
+database_name = "veil-vpn-db"
+database_id = "100ee368-cf3b-4c91-9c7f-13d9e714a38f"
+migrations_dir = "d1/migrations"
+
+# ---- KV: rate limiting buckets + short-lived caches ----
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "b5746582c1b7477d95b08c19c8064d31"
+
+# ---- Public (non-secret) vars ----
+[vars]
+APP_NAME = "VeilVPN"
+APP_ENV = "production"
+APP_URL = "https://veil.example"
+API_PUBLIC_URL = "https://api.veil.example"
+JWT_ISSUER = "veil-api"
+# ACCESS_TOKEN_TTL_SECONDS = "900"          # 15 min
+# REFRESH_TOKEN_TTL_SECONDS = "2592000"    # 30 days
+
+# ---- Crons ----
+# every 15 min: expire peers, sweep used/expired email tokens, revoke expired refresh tokens
+# hourly: subscription lifecycle (trial expiry, grace, past_due), audit-log checkpoint
+[triggers]
+crons = ["*/15 * * * *", "0 * * * *"]
