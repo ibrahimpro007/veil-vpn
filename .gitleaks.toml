@@ -1,0 +1,14 @@
+# VeilVPN gitleaks config — extends the default rule set, then grandfathers
+# the initial build commit's verified false positives:
+#   - test fixtures (node-agent *_test.go HMAC/env secrets)
+#   - RFC 6238 TOTP test vector (apps/api/test/totp.test.ts)
+#   - cloud-init doc placeholder values (infra/cloud-init/ORACLE_VM_NOTES.md)
+#   - committed .next build artifacts (initial commit only)
+# Verified 2026-10-12: no real secret in history. Any NEW finding in a
+# later commit still fails the Security workflow.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "initial build commit cf89332e: verified false positives only"
+commits = ["cf89332e98deb96068d47e6c4a151bc91e4122dd"]

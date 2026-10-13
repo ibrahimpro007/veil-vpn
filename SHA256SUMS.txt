@@ -1,0 +1,8 @@
+# VeilVPN v1.0.0 — SHA-256 checksums
+# Source: GitHub-reported server-side digests, verified 2026-10-10 via api.github.com
+# Release: https://github.com/ibrahimpro007/veil-vpn/releases/tag/v1.0.0
+# Not yet attached to the release (attach as a release asset to make the
+# "Verify the SHA-256 in SHA256SUMS.txt" note in the release body actionable).
+2057d1123bc4101b8ff8d7e212d5013f7308663c5033c6eb3f7573c1fbc3f936  VeilVPN-Setup.exe
+c64cc7b1db4b4eeaadd6f1ced99e56a5f0a34b8806587f106c774704710827e6  VeilVPN.apk
+56c43fdc68082d8defdbe0c37786b25ca6692344f69f0ee8c963933035976c4c  VeilVPN.dmg
