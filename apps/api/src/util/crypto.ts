@@ -96,7 +96,8 @@ export function randomToken(numBytes = 32): string {
  * bundle, and verifies in ~250ms. The stored format is self-describing so
  * the algorithm can be migrated later without invalidating existing hashes.
  */
-export const PBKDF2_ITERATIONS = 600_000;
+// Cloudflare Workers' WebCrypto caps PBKDF2 at 100,000 iterations.
+export const PBKDF2_ITERATIONS = 100_000;
 const PW_PREFIX = "$pbkdf2-sha256";
 
 export async function hashPassword(
