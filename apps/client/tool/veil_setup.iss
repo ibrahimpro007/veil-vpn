@@ -44,6 +44,8 @@ Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignore
 Source: "..\build\helper\{#HelperExe}"; DestDir: "{app}"; Flags: ignoreversion
 ; Helper installer script
 Source: "install_helper.ps1"; DestDir: "{app}"; Flags: ignoreversion
+; Visual C++ Redistributable (required by Flutter Windows apps)
+Source: "vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
@@ -54,6 +56,10 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Run]
+; Install Visual C++ Redistributable first (Flutter apps need the MSVC runtime).
+; /quiet: silent install. Already-installed systems finish in seconds.
+Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/quiet /norestart"; \
+  StatusMsg: "Installing Visual C++ Redistributable..."; Flags: waituntilterminated
 ; Register the elevated helper service (needs the admin privileges the
 ; installer already has). /SILENT: skip the wizard checkbox page noise.
 Filename: "powershell.exe"; \

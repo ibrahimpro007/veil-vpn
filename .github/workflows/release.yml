@@ -90,6 +90,13 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
+      - name: Download VC++ Redistributable
+        run: |
+          # Flutter Windows apps need the MSVC runtime. Bundle the redistributable
+          # so the app launches on PCs without Visual Studio installed.
+          Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" `
+            -OutFile "apps/client/tool/vc_redist.x64.exe"
+
       - name: Compile installer
         env:
           VEIL_VERSION: ${{ env.VERSION }}
