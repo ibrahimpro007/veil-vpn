@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PricingTable from "@/components/PricingTable";
-import { APP_NAME } from "@/lib/config";
+import JsonLd from "@/components/JsonLd";
+import { APP_NAME, SITE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -31,8 +32,45 @@ const COMPARISON: {
 ];
 
 export default function PricingPage() {
+  const base = SITE_URL.replace(/\/$/, "");
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `${APP_NAME} VPN`,
+    description:
+      "No-logs WireGuard VPN with kill switch, DNS leak protection, and split tunneling for Windows, macOS, and Android.",
+    brand: { "@type": "Brand", name: APP_NAME },
+    url: `${base}/pricing`,
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Free Trial",
+        price: "0",
+        priceCurrency: "USD",
+        description: "7-day free trial, 1 device, no credit card required",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "Monthly",
+        price: "4.99",
+        priceCurrency: "USD",
+        description: "Monthly subscription, up to 5 devices, cancel anytime",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "Yearly",
+        price: "49.99",
+        priceCurrency: "USD",
+        description: "Yearly subscription, up to 5 devices, 2 months free",
+        availability: "https://schema.org/InStock",
+      },
+    ],
+  };
   return (
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <JsonLd data={productJsonLd} />
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
           Pricing

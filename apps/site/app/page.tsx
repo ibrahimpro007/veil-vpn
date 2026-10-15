@@ -1,10 +1,17 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import DownloadButtons from "@/components/DownloadButtons";
 import PricingTable from "@/components/PricingTable";
 import FaqAccordion from "@/components/FaqAccordion";
+import Reveal from "@/components/Reveal";
 import { APP_NAME } from "@/lib/config";
 import { FAQ_ITEMS } from "./faq/faqItems";
+
+// GSAP parallax is decorative: lazy-load it so it never blocks first paint.
+const HeroParallax = dynamic(() => import("@/components/HeroParallax"), {
+  ssr: false,
+});
 
 export const metadata: Metadata = {
   title: `${APP_NAME} — No-Logs WireGuard VPN`,
@@ -120,55 +127,64 @@ export default function HomePage() {
     <>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden
-          style={{
-            background:
-              "radial-gradient(60rem 30rem at 50% -10%, rgba(52,211,153,0.18), transparent 60%), radial-gradient(40rem 24rem at 85% 20%, rgba(34,211,238,0.12), transparent 60%)",
-          }}
-        />
+        <HeroParallax>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(60rem 30rem at 50% -10%, rgba(52,211,153,0.18), transparent 60%), radial-gradient(40rem 24rem at 85% 20%, rgba(34,211,238,0.12), transparent 60%)",
+            }}
+          />
+        </HeroParallax>
+        {/* Static fallback glow for no-JS / pre-hydration is rendered by
+            HeroParallax after mount; the section keeps its min-height so
+            there is no layout shift. */}
         <div className="relative mx-auto max-w-4xl px-4 pb-16 pt-20 text-center sm:px-6 sm:pt-28">
-          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-sm font-medium text-emerald-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
-            No-logs VPN · Free 7-day trial
-          </p>
-          <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl">
-            Your traffic is yours.
-            <span className="block bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-              We keep no record of it.
-            </span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-300">
-            {APP_NAME} is a fast, no-logs WireGuard VPN with a kill switch, DNS
-            leak protection, and split tunneling — for Windows, macOS, and
-            Android.
-          </p>
-          <div className="mt-10">
-            <DownloadButtons />
-          </div>
-          <p className="mt-4 text-sm text-slate-500">
-            Free 7-day trial · No credit card required · Cancel anytime
-          </p>
+          <Reveal>
+            <p className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-sm font-medium text-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+              No-logs VPN · Free 7-day trial
+            </p>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl">
+              Your traffic is yours.
+              <span className="block bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
+                We keep no record of it.
+              </span>
+            </h1>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-300">
+              {APP_NAME} is a fast, no-logs WireGuard VPN with a kill switch, DNS
+              leak protection, and split tunneling — for Windows, macOS, and
+              Android.
+            </p>
+            <div className="mt-10">
+              <DownloadButtons />
+            </div>
+            <p className="mt-4 text-sm text-slate-500">
+              Free 7-day trial · No credit card required · Cancel anytime
+            </p>
+          </Reveal>
         </div>
       </section>
 
       {/* NO-LOGS BADGES */}
       <section className="border-y border-white/10 bg-ink-900/40">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-          {BADGES.map((b) => (
-            <div
-              key={b.title}
-              className="flex items-start gap-3 rounded-2xl border border-white/10 bg-ink-950/60 p-4"
-            >
-              <span className="text-2xl" aria-hidden>
-                {b.icon}
-              </span>
-              <div>
-                <h3 className="font-bold text-white">{b.title}</h3>
-                <p className="mt-1 text-sm text-slate-400">{b.text}</p>
+          {BADGES.map((b, i) => (
+            <Reveal key={b.title} delay={(i % 4) * 0.08}>
+              <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-ink-950/60 p-4">
+                <span className="text-2xl" aria-hidden>
+                  {b.icon}
+                </span>
+                <div>
+                  <h3 className="font-bold text-white">{b.title}</h3>
+                  <p className="mt-1 text-sm text-slate-400">{b.text}</p>
+                </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -180,19 +196,18 @@ export default function HomePage() {
         sub="Modern protocol, sensible defaults, and controls that stay out of your way."
       >
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="rounded-2xl border border-white/10 bg-ink-900/60 p-6 transition hover:border-emerald-400/40"
-            >
-              <div className="text-3xl" aria-hidden>
-                {f.icon}
+          {FEATURES.map((f, i) => (
+            <Reveal key={f.title} delay={(i % 3) * 0.08}>
+              <div className="h-full rounded-2xl border border-white/10 bg-ink-900/60 p-6 transition hover:border-emerald-400/40">
+                <div className="text-3xl" aria-hidden>
+                  {f.icon}
+                </div>
+                <h3 className="mt-4 text-lg font-bold text-white">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                  {f.text}
+                </p>
               </div>
-              <h3 className="mt-4 text-lg font-bold text-white">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                {f.text}
-              </p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </Section>
@@ -204,19 +219,18 @@ export default function HomePage() {
         sub="No accounts to link, no stores to visit — download, sign up, connect."
       >
         <div className="grid gap-5 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <div
-              key={s.n}
-              className="relative rounded-2xl border border-white/10 bg-ink-900/60 p-6"
-            >
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-400 text-lg font-extrabold text-ink-950">
-                {s.n}
-              </span>
-              <h3 className="mt-4 text-lg font-bold text-white">{s.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                {s.text}
-              </p>
-            </div>
+          {STEPS.map((s, i) => (
+            <Reveal key={s.n} delay={i * 0.1}>
+              <div className="relative h-full rounded-2xl border border-white/10 bg-ink-900/60 p-6">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-400 text-lg font-extrabold text-ink-950">
+                  {s.n}
+                </span>
+                <h3 className="mt-4 text-lg font-bold text-white">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                  {s.text}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
         <div className="mt-8 text-center">

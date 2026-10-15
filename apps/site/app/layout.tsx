@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Analytics from "@/components/Analytics";
+import JsonLd from "@/components/JsonLd";
 import { APP_NAME, SITE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -43,9 +45,28 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const base = SITE_URL.replace(/\/$/, "");
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: APP_NAME,
+    url: base,
+    description:
+      "VeilVPN is a no-logs WireGuard VPN with a kill switch, DNS leak protection, and split tunneling.",
+    sameAs: ["https://github.com/ibrahimpro007/veil-vpn"],
+  };
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: APP_NAME,
+    url: base,
+  };
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col font-sans">
+        <JsonLd data={orgJsonLd} />
+        <JsonLd data={websiteJsonLd} />
+        <Analytics />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

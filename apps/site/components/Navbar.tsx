@@ -7,6 +7,7 @@ import { APP_NAME } from "@/lib/config";
 const LINKS = [
   { href: "/pricing", label: "Pricing" },
   { href: "/download", label: "Download" },
+  { href: "/blog", label: "Blog" },
   { href: "/faq", label: "FAQ" },
   { href: "/privacy", label: "Privacy" },
 ];

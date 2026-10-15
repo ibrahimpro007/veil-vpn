@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import FaqAccordion from "@/components/FaqAccordion";
+import JsonLd from "@/components/JsonLd";
 import { FAQ_ITEMS } from "./faqItems";
+import { faqJsonLd } from "./faqJsonLd";
 import { APP_NAME } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+      <JsonLd data={faqJsonLd()} />
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
         FAQ
       </p>
