@@ -14,6 +14,90 @@ function readingMinutesForBody(body: string): number {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: "setup-veilvpn-windows-5-minutes",
+    title: "How to Set Up VeilVPN on Windows in 5 Minutes (Step-by-Step, 2026)",
+    description:
+      "Download the VeilVPN installer, create your account, connect to a WireGuard server, and verify your connection — the complete Windows setup guide, troubleshooting, and the 7-day free trial.",
+    date: "2026-10-16",
+    tags: ["tutorial", "windows", "setup", "wireguard"],
+    body: `## Before you start
+
+You need a Windows 10 or 11 PC with an internet connection, about 50 MB of free disk space, and one email address for your account. That's it — no command line, no config files, no manual key exchange. The installer handles the WireGuard tunnel adapter and the virtual network driver for you.
+
+**Good to know:** VeilVPN offers a **7-day free trial** with full features and no credit card required — every step in this guide works during the trial. See [pricing](/pricing) for plan details after the trial.
+
+## Step 1 — Download the installer (2 minutes)
+
+1. Go to the [download page](/download).
+2. Click **Download for Windows**. You'll get a file named VeilVPN-Setup.exe (about 35 MB — the installer bundles the VC++ runtime so nothing else needs installing).
+3. When your browser asks, choose **Keep** / **Save** — some browsers flag unfamiliar executables; this is a standard signed installer, so it's safe to proceed.
+
+The same [download page](/download) also has the Android APK and macOS DMG if you want to set up other devices later.
+
+## Step 2 — Install VeilVPN (1 minute)
+
+1. Double-click VeilVPN-Setup.exe.
+2. If Windows shows a SmartScreen prompt ("Windows protected your PC"), click **More info** then **Run anyway**. This appears for any new app that isn't yet on Microsoft's reputation list — it is not an error.
+3. Follow the installer: click **Next**, accept the license, and choose the install location (the default is fine).
+4. Click **Install**, then **Finish**. VeilVPN launches automatically.
+
+The installer sets up the WireGuard adapter in the background. You don't need to configure anything in Windows network settings.
+
+## Step 3 — Create your account and sign in (1 minute)
+
+1. On first launch, click **Sign up** and enter your email address. We'll email you a one-time sign-in link — no password to remember, and nothing to lose if a password database leaks elsewhere.
+2. Open the email, click the link, and you're signed in. The app drops straight into the main screen.
+3. Trial users land on the **7-day free trial** automatically — no card, no countdown pressure. Paid plans are on [pricing](/pricing) if you want them later.
+
+**Tip:** use the same email on every device. Your subscription is tied to your email, not to a machine, so Windows, Android, and macOS all share one plan (up to 5 simultaneous connections).
+
+## Step 4 — Connect to a server (30 seconds)
+
+1. The app opens with a big **Connect** button and a server list.
+2. Leave it on **Fastest** for everyday use — the app measures latency and picks the best server automatically.
+3. Click **Connect**. Within a few seconds the button turns into **Disconnect** and the status bar shows the server name and your new IP address.
+
+That's the whole setup. Your traffic is now inside an encrypted WireGuard tunnel, and — because VeilVPN is a strict no-logs service — there's no record of what you do while connected. (Curious what "no logs" really means? Read [What Is a No-Logs VPN?](/blog/what-is-a-no-logs-vpn).)
+
+## Step 5 — Verify your connection (30 seconds)
+
+Don't take the app's word for it — verify in two clicks:
+
+1. Before connecting, visit an IP-check site and note your IP and location.
+2. Connect VeilVPN, reload the same site, and confirm the IP and location now match your chosen server.
+
+Also check for leaks while you're at it: run a DNS-leak test and confirm the results show only your VPN server's DNS — never your ISP's. If anything leaks, the app's **kill switch** (Settings, then Kill Switch) blocks all traffic the moment the tunnel drops, so leaks can't happen silently.
+
+## Troubleshooting: the three problems people actually hit
+
+**"Setup won't run."** Re-download from the [official download page](/download) — partial downloads from interrupted connections are the usual cause. Run the installer as Administrator if it stalls.
+
+**"It connects, but websites won't load."** Almost always a DNS hiccup. Disconnect, reconnect, and give it 10 seconds. If it persists, switch protocol in Settings, Connection (WireGuard vs fallback) and try one more server location.
+
+**"It's slower than expected."** Pick the nearest server instead of "Fastest" if one is much closer geographically, and close bandwidth-heavy background syncs (cloud backup, game launchers) during the test. A healthy WireGuard connection keeps 80–90% of your base speed.
+
+## Frequently asked questions
+
+**Is VeilVPN free?**
+The 7-day trial is free with no credit card. After that, paid plans start on the [pricing page](/pricing) — about 16 cents a day on the annual plan.
+
+**Do I need to be technical to use a VPN on Windows?**
+No. The installer and the one-tap Connect button are the entire experience. The guide above takes five minutes precisely because there's nothing technical in it.
+
+**Can I use one account on Windows and my phone?**
+Yes — one email, up to 5 devices at once, including Android and macOS from the same [download page](/download).
+
+**Will a VPN slow down my PC?**
+The WireGuard protocol is extremely light — a few percent of one CPU core at full speed. You won't feel it in games, calls, or streaming.
+
+**Does VeilVPN keep logs of my Windows activity?**
+No. VeilVPN runs a strict no-logs policy: no browsing history, no DNS logs, no connection timestamps tied to your account.
+
+## What to do next
+
+You've spent five minutes — now use the next seven days. Stream on public Wi-Fi at the airport, work from the café, use the kill switch on shared networks. When the trial ends, you keep nothing but the habit: [download VeilVPN](/download) and stay private.`,
+  },
+  {
     slug: "what-is-a-no-logs-vpn",
     title: "What Is a No-Logs VPN? (And Why It Matters More Than Speed)",
     description:
