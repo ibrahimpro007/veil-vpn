@@ -205,7 +205,7 @@ export function registerAdminRoutes(app: App): void {
       );
       return c.json({
         totpRequired: true,
-        challengeToken,
+        challengeId: challengeToken,
         expiresIn: CHALLENGE_TTL_SEC,
       });
     },
@@ -218,14 +218,18 @@ export function registerAdminRoutes(app: App): void {
     async (c) => {
       const body = await c.req.json().catch(() => null);
       const challengeToken =
-        typeof body?.challengeToken === "string" ? body.challengeToken : "";
+        typeof body?.challengeId === "string"
+          ? body.challengeId
+          : typeof body?.challengeToken === "string"
+            ? body.challengeToken
+            : "";
       const code = typeof body?.code === "string" ? body.code : "";
       if (!challengeToken || !code) {
         return apiError(
           c,
           400,
           "validation_error",
-          "challengeToken and code are required.",
+          "challengeId and code are required.",
         );
       }
       const claims = await verifyJwtEdDSA(
