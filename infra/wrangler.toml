@@ -31,8 +31,9 @@ id = "b5746582c1b7477d95b08c19c8064d31"
 [vars]
 APP_NAME = "VeilVPN"
 APP_ENV = "production"
-APP_URL = "https://veil.example"
-API_PUBLIC_URL = "https://api.veil.example"
+APP_URL = "https://veil-vpn-site.vercel.app"
+API_PUBLIC_URL = "https://veil-api.luisswift123.workers.dev"
+ADMIN_URL = "https://veil-vpn-admin.vercel.app"
 JWT_ISSUER = "veil-api"
 # ACCESS_TOKEN_TTL_SECONDS = "900"          # 15 min
 # REFRESH_TOKEN_TTL_SECONDS = "2592000"    # 30 days
