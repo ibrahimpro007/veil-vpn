@@ -39,7 +39,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 ; Flutter release build output (flutter build windows --release)
-Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; The Flutter exe is named veil_client.exe (from pubspec name); rename to VeilVPN.exe on install
+Source: "..\build\windows\x64\runner\Release\veil_client.exe"; DestDir: "{app}"; DestName: "{#AppExe}"; Flags: ignoreversion
+Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "veil_client.exe"
 ; Elevated tunnel helper (dart compile exe windows\helper\veil_helper.dart)
 Source: "..\build\helper\{#HelperExe}"; DestDir: "{app}"; Flags: ignoreversion
 ; Helper installer script
