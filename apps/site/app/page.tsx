@@ -142,7 +142,10 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-4xl px-4 pb-16 pt-20 text-center sm:px-6 sm:pt-28">
           <Reveal>
             <p className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-sm font-medium text-emerald-200">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+              <span
+                className="h-2 w-2 rounded-full bg-emerald-400"
+                aria-hidden
+              />
               No-logs VPN · Free 7-day trial
             </p>
           </Reveal>
@@ -156,8 +159,8 @@ export default function HomePage() {
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-300">
-              {APP_NAME} is a fast, no-logs WireGuard VPN with a kill switch, DNS
-              leak protection, and split tunneling — for Windows, macOS, and
+              {APP_NAME} is a fast, no-logs WireGuard VPN with a kill switch,
+              DNS leak protection, and split tunneling — for Windows, macOS, and
               Android.
             </p>
             <div className="mt-10">

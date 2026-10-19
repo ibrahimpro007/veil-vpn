@@ -8,7 +8,11 @@ import { useEffect, useRef } from "react";
  * they never touch the initial bundle. The target is absolutely positioned
  * decoration, so there is zero layout shift (CLS-safe).
  */
-export default function HeroParallax({ children }: { children: React.ReactNode }) {
+export default function HeroParallax({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

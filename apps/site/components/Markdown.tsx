@@ -79,13 +79,19 @@ export default function Markdown({ body }: { body: string }) {
     listItems = [];
     out.push(
       listOrdered ? (
-        <ol key={key++} className="my-4 list-decimal space-y-2 pl-6 text-slate-300">
+        <ol
+          key={key++}
+          className="my-4 list-decimal space-y-2 pl-6 text-slate-300"
+        >
           {items.map((t, j) => (
             <li key={j}>{inline(t, `li-${key}-${j}`)}</li>
           ))}
         </ol>
       ) : (
-        <ul key={key++} className="my-4 list-disc space-y-2 pl-6 text-slate-300">
+        <ul
+          key={key++}
+          className="my-4 list-disc space-y-2 pl-6 text-slate-300"
+        >
           {items.map((t, j) => (
             <li key={j}>{inline(t, `li-${key}-${j}`)}</li>
           ))}
@@ -131,7 +137,10 @@ export default function Markdown({ body }: { body: string }) {
       flushList();
       flushTable();
       out.push(
-        <h2 key={key++} className="mb-4 mt-10 text-2xl font-extrabold tracking-tight text-white">
+        <h2
+          key={key++}
+          className="mb-4 mt-10 text-2xl font-extrabold tracking-tight text-white"
+        >
           {inline(trimmed.slice(3), `h2-${key}`)}
         </h2>,
       );

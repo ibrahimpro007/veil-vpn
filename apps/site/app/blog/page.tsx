@@ -103,8 +103,8 @@ export default function BlogIndexPage() {
           Put it into practice
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-slate-300">
-          Reading about privacy is step one. Step two takes about three
-          minutes: download {APP_NAME}, start your free trial, and browse like
+          Reading about privacy is step one. Step two takes about three minutes:
+          download {APP_NAME}, start your free trial, and browse like
           nobody&apos;s watching — because nobody is.
         </p>
         <Link

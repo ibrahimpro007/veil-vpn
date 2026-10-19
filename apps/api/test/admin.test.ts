@@ -42,11 +42,10 @@ async function adminLogin(email: string, secret: string): Promise<string> {
   });
   expect(step1.status).toBe(200);
   expect((step1.json as { totpRequired: boolean }).totpRequired).toBe(true);
-  const challengeToken = (step1.json as { challengeToken: string })
-    .challengeToken;
+  const challengeId = (step1.json as { challengeId: string }).challengeId;
   const code = await totpCode(secret);
   const step2 = await treq(ctx, "POST", "/admin/auth/totp-verify", {
-    body: { challengeToken, code },
+    body: { challengeId, code },
   });
   expect(step2.status).toBe(200);
   return (step2.json as { accessToken: string }).accessToken;
@@ -62,10 +61,9 @@ describe("admin auth", () => {
     const step1 = await treq(ctx, "POST", "/admin/auth/login", {
       body: { email: "owner@example.com", password: "correct-horse-12" },
     });
-    const challengeToken = (step1.json as { challengeToken: string })
-      .challengeToken;
+    const challengeId = (step1.json as { challengeId: string }).challengeId;
     const badTotp = await treq(ctx, "POST", "/admin/auth/totp-verify", {
-      body: { challengeToken, code: "000000" },
+      body: { challengeId, code: "000000" },
     });
     expect(badTotp.status).toBe(401);
   });
