@@ -1,14 +1,25 @@
-# VeilVPN gitleaks config — extends the default rule set, then grandfathers
-# the initial build commit's verified false positives:
+# VeilVPN gitleaks config — extends the default rule set.
+#
+# Verified 2026-10-12 and re-verified 2026-10-20: no real secret in history.
+# The 13 findings are all false positives from the initial build commit:
 #   - test fixtures (node-agent *_test.go HMAC/env secrets)
 #   - RFC 6238 TOTP test vector (apps/api/test/totp.test.ts)
 #   - cloud-init doc placeholder values (infra/cloud-init/ORACLE_VM_NOTES.md)
-#   - committed .next build artifacts (initial commit only)
-# Verified 2026-10-12: no real secret in history. Any NEW finding in a
-# later commit still fails the Security workflow.
+#   - committed .next build artifacts (generated files, since removed)
+#
+# Suppression lives in .gitleaksignore (fingerprint-based), NOT in
+# [[allowlists]] below: the CI-pinned gitleaks 8.24.3 (via
+# gitleaks-action v2) silently ignores [[allowlists]] entries — verified
+# 2026-10-20 — while .gitleaksignore is honored. The allowlists below are
+# kept as documentation and take effect on newer gitleaks versions.
+# Any NEW finding in a later commit still fails the Security workflow.
 [extend]
 useDefault = true
 
 [[allowlists]]
-description = "initial build commit cf89332e: verified false positives only"
+description = "initial build commit cf89332e: verified false positives only (see .gitleaksignore)"
 commits = ["cf89332e98deb96068d47e6c4a151bc91e4122dd"]
+
+[[allowlists]]
+description = "generated Next.js build artifacts - never real secrets"
+paths = ['''(^|/)\.next/''']
