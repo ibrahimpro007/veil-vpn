@@ -1,5 +1,9 @@
 /**
  * Control-plane client for node agents (apps/node-agent).
+ * Agent routes (apps/node-agent/main.go): POST /peers,
+ * DELETE /peers/{pubkey}, GET /health, GET /metrics — note there is NO
+ * /v1/node prefix; calling one cost us the first end-to-end connect test
+ * (2026-10-20: agent 404 → "node did not accept the peer").
  * Implements the HMAC scheme from PHASE1_NOTES.md exactly:
  *   bodyHash = sha256_hex(raw body)            ("" for empty bodies)
  *   message  = "<ts>.<METHOD>.<path>.<bodyHash>"
@@ -74,7 +78,7 @@ export async function nodeAddPeer(
 ): Promise<boolean> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const r = await nodeFetch(env, node, "POST", "/v1/node/peers", {
+      const r = await nodeFetch(env, node, "POST", "/peers", {
         publicKey,
         assignedIp,
         dns,
@@ -94,7 +98,7 @@ export async function nodeRemovePeer(
   publicKey: string,
 ): Promise<boolean> {
   try {
-    const path = `/v1/node/peers/${encodeURIComponent(publicKey)}`;
+    const path = `/peers/${encodeURIComponent(publicKey)}`;
     const r = await nodeFetch(env, node, "DELETE", path, null);
     return r.ok;
   } catch {
