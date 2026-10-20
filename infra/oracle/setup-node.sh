@@ -13,7 +13,9 @@ if ! /usr/local/go/bin/go version > /dev/null 2>&1; then
   wget -q https://go.dev/dl/${GO_VER}.linux-amd64.tar.gz -O /tmp/go.tar.gz
   rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz
 fi
-export PATH=$PATH:/usr/local/go/bin
+export PATH=/usr/local/go/bin:$PATH
+# Remove old apt Go if present (conflicts with new Go)
+apt-get remove -y -qq golang-go > /dev/null 2>&1 || true
 echo "[1/7] Dependencies installed"
 
 # 2. Generate WireGuard server keys
