@@ -223,6 +223,23 @@ export function registerAuthRoutes(app: App): void {
       });
       await setEmailVerified(db, user.id, nowSec());
     }
+    // Google users skip the verify-email step (their email is pre-verified),
+    // so grant the same welcome trial here when they have no live
+    // subscription — without it the client blocks connect with
+    // "No active subscription" (bug found 2026-10-20).
+    const liveSub = await getLiveSubscriptionByUser(db, user.id);
+    if (!liveSub) {
+      const trialPlan = await getPlanBySlug(db, "free-trial");
+      if (trialPlan) {
+        await createSubscription(db, {
+          userId: user.id,
+          planId: trialPlan.id,
+          status: "trialing",
+          provider: "comp",
+          currentPeriodEnd: nowSec() + TRIAL_DAYS * 86400,
+        });
+      }
+    }
     if (user.status === "suspended") {
       return apiError(
         c,
