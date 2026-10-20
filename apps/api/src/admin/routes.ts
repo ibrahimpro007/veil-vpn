@@ -185,6 +185,38 @@ export function registerAdminRoutes(app: App): void {
       }
       await clearLoginAttempts(c.env.RATE_LIMIT, ip, `admin:${email}`);
       const now = nowSec();
+      // Simple mode (owner request, 2026-10-20): with ADMIN_LOGIN_SIMPLE=true
+      // the password alone issues the admin session — no TOTP step. Set the
+      // var to "false" (or unset the flag path) to restore mandatory TOTP;
+      // the /admin/auth/totp-verify endpoint stays live either way.
+      if (c.env.ADMIN_LOGIN_SIMPLE === "true") {
+        const sessionToken = await signJwtEdDSA(
+          {
+            sub: admin.id,
+            iss: jwtIssuer(c.env),
+            iat: now,
+            exp: now + ADMIN_SESSION_TTL_SEC,
+            typ: "admin",
+            role: admin.role,
+          },
+          c.env.JWT_EDDSA_PRIVATE_KEY,
+        );
+        await audit(
+          db,
+          admin.id,
+          "admin.login",
+          "admin_user",
+          admin.id,
+          null,
+        );
+        return c.json({
+          totpRequired: false,
+          accessToken: sessionToken,
+          sessionToken,
+          expiresIn: ADMIN_SESSION_TTL_SEC,
+          role: admin.role,
+        });
+      }
       const challengeToken = await signJwtEdDSA(
         {
           sub: admin.id,
@@ -296,6 +328,7 @@ export function registerAdminRoutes(app: App): void {
       );
       return c.json({
         accessToken: sessionToken,
+        sessionToken,
         expiresIn: ADMIN_SESSION_TTL_SEC,
         role: adminRow.role,
       });

@@ -29,6 +29,7 @@ id = "b5746582c1b7477d95b08c19c8064d31"
 
 # ---- Public (non-secret) vars ----
 [vars]
+ADMIN_LOGIN_SIMPLE = "true"
 APP_NAME = "VeilVPN"
 APP_ENV = "production"
 APP_URL = "https://veil-vpn-site.vercel.app"
