@@ -285,36 +285,30 @@ jobs:
         run: |
           cd release-assets
           echo "Downloaded files:"
-          find . -type f | head -20
-          # The download site links to fixed names via /releases/latest/download/.
-          for f in VeilVPN-Setup-*.exe; do
-            [ -e "$f" ] && [ "$f" != "VeilVPN-Setup.exe" ] && mv "$f" VeilVPN-Setup.exe
-          done
-          for f in VeilVPN-*.apk; do
-            [ -e "$f" ] && [ "$f" != "VeilVPN.apk" ] && mv "$f" VeilVPN.apk
-          done
-          for f in VeilVPN-*.dmg; do
-            [ -e "$f" ] && [ "$f" != "VeilVPN.dmg" ] && mv "$f" VeilVPN.dmg
-          done
-          ls -la VeilVPN-*
-          # Fail loudly if any platform asset is missing — never ship a partial release.
+          find . -type f
+          # Explicit renames (no globs/loops — the v1.0.3 run lost the apk/dmg
+          # somewhere in the loop version; explicit is debuggable).
+          mv -v VeilVPN-Setup-*.exe VeilVPN-Setup.exe
+          mv -v VeilVPN-*.apk VeilVPN.apk
+          mv -v VeilVPN-*.dmg VeilVPN.dmg
+          ls -la
           for expected in VeilVPN-Setup.exe VeilVPN.apk VeilVPN.dmg; do
             if [ ! -f "$expected" ]; then
               echo "::error::Missing expected release asset: $expected"
               exit 1
             fi
           done
-
-      - name: SHA256SUMS.txt
-        run: |
-          cd release-assets
-          sha256sum VeilVPN-* > SHA256SUMS.txt
+          sha256sum VeilVPN-Setup.exe VeilVPN.apk VeilVPN.dmg > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-assets/VeilVPN-*
+          files: |
+            release-assets/VeilVPN-Setup.exe
+            release-assets/VeilVPN.apk
+            release-assets/VeilVPN.dmg
+            release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
 
       - name: Verify release assets landed (v1.0.2 shipped exe-only, silently)
