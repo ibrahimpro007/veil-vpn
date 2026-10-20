@@ -201,14 +201,7 @@ export function registerAdminRoutes(app: App): void {
           },
           c.env.JWT_EDDSA_PRIVATE_KEY,
         );
-        await audit(
-          db,
-          admin.id,
-          "admin.login",
-          "admin_user",
-          admin.id,
-          null,
-        );
+        await audit(db, admin.id, "admin.login", "admin_user", admin.id, null);
         return c.json({
           totpRequired: false,
           accessToken: sessionToken,
