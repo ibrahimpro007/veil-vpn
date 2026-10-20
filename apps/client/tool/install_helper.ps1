@@ -75,7 +75,7 @@ $helperJson = "$veilDir\helper.json"
 
 # ACL: no inheritance; SYSTEM + Administrators full; installing user read-only.
 $installingUser = "$env:USERDOMAIN\$env:USERNAME"
-icacls $helperJson /inheritance:r /grant:r "SYSTEM:(F)" "Administrators:(F)" "$installingUser:(R)" | Out-Null
+icacls $helperJson /inheritance:r /grant:r "SYSTEM:(F)" "Administrators:(F)" "${installingUser}:(R)" | Out-Null
 icacls $helperJson
 Write-Host "  Token provisioned. The app reads it on first run and stores it in secure storage."
 
