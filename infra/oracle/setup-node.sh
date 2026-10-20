@@ -6,7 +6,14 @@ echo "=== VeilVPN Node Setup ==="
 
 # 1. Install dependencies
 apt-get update -qq
-apt-get install -y -qq wireguard wireguard-tools golang-go iptables-persistent git curl > /dev/null 2>&1
+apt-get install -y -qq wireguard wireguard-tools iptables-persistent git curl wget > /dev/null 2>&1
+# Install latest Go (Ubuntu's apt Go is too old for this codebase)
+if ! /usr/local/go/bin/go version > /dev/null 2>&1; then
+  GO_VER=$(curl -s https://go.dev/VERSION?m=text | head -1)
+  wget -q https://go.dev/dl/${GO_VER}.linux-amd64.tar.gz -O /tmp/go.tar.gz
+  rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz
+fi
+export PATH=$PATH:/usr/local/go/bin
 echo "[1/7] Dependencies installed"
 
 # 2. Generate WireGuard server keys
