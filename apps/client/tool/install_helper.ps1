@@ -53,7 +53,14 @@ Write-Host "  Found: $wgExe"
 Write-Host "[3/5] Installing veil_helper.exe..."
 $destExe = "$installDir\veil_helper.exe"
 if ($HelperExe -ne "" -and (Test-Path $HelperExe)) {
-  Copy-Item $HelperExe $destExe -Force
+  # The Inno installer already places veil_helper.exe in {app} and invokes
+  # this script with -HelperExe pointing at that same file — copying it
+  # onto itself throws and (with ErrorActionPreference=Stop) aborted the
+  # whole helper setup on end-user installs. Skip the copy when the source
+  # IS the destination.
+  if ((Resolve-Path $HelperExe).Path -ne $destExe) {
+    Copy-Item $HelperExe $destExe -Force
+  }
 } else {
   $dart = Get-Command dart -ErrorAction SilentlyContinue
   if ($null -eq $dart) {
