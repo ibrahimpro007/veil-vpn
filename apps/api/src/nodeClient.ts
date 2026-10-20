@@ -50,7 +50,20 @@ async function nodeFetch(
   // plain HTTP authenticated by the HMAC signature above — Workers fetch
   // cannot accept the agent's self-signed IP certificate, so TLS is not
   // usable here; payloads carry only peer public keys and tunnel IPs.
-  const host = node.endpoint.split(":")[0];
+  //
+  // Workers fetch() to a bare IP literal is refused by the edge with
+  // "403 error code: 1003" (direct-IP access) — found the hard way on
+  // 2026-10-20 after the HMAC and route fixes. NODE_AGENT_HOST_MAP
+  // ("ip=hostname,ip=hostname") gives each node a DNS name for agent
+  // calls; unmapped nodes fall back to the raw IP (works outside Workers).
+  const ip = node.endpoint.split(":")[0];
+  const map = Object.fromEntries(
+    (env.NODE_AGENT_HOST_MAP ?? "")
+      .split(",")
+      .map((pair) => pair.trim().split("="))
+      .filter((kv) => kv.length === 2 && kv[0] !== "" && kv[1] !== ""),
+  );
+  const host = map[ip] ?? ip;
   const agentPort = env.NODE_AGENT_PORT ?? "8443";
   const res = await fetch(`http://${host}:${agentPort}${path}`, {
     method,
@@ -61,6 +74,15 @@ async function nodeFetch(
     },
     body: rawBody === "" ? undefined : rawBody,
   });
+  // TEMP DIAGNOSTIC (2026-10-20 connect debugging): surface the agent's
+  // verdict in `wrangler tail` — status + error body only, never secrets.
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.log(
+      `nodeFetch ${method} ${path} -> ${res.status} ${text.slice(0, 200)}`,
+    );
+    return { ok: false, status: res.status };
+  }
   return { ok: res.ok, status: res.status };
 }
 

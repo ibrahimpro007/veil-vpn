@@ -36,6 +36,7 @@ export interface Env {
   ADMIN_LOGIN_SIMPLE?: string;
   GOOGLE_OAUTH_CLIENT_IDS?: string;
   GOOGLE_SIGNIN_ENABLED?: string;
+  NODE_AGENT_HOST_MAP?: string;
 
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?: string;
   APPLE_APPSTORE_ISSUER_ID?: string;

@@ -33,6 +33,9 @@ ADMIN_LOGIN_SIMPLE = "true"
 # Google sign-in (enabled 2026-10-20; project veilvpn-app, consent in
 # Testing mode with luisswift123@gmail.com as test user).
 GOOGLE_SIGNIN_ENABLED = "true"
+# Workers fetch() refuses bare-IP URLs (403 error 1003), so agent calls go
+# through this free DuckDNS name for the Hyderabad node (same IP).
+NODE_AGENT_HOST_MAP = "140.245.224.114=veilhyd1.duckdns.org"
 GOOGLE_OAUTH_CLIENT_IDS = "855470494126-2q6jpq8pdk2ofcum386n78ft65lmvg8n.apps.googleusercontent.com,855470494126-v2h0pcdguf0kd7o3n5ng1cp8egkqifkp.apps.googleusercontent.com,855470494126-inc4ib8gjjen74tkk5ghn5f5j87m3c8e.apps.googleusercontent.com"
 APP_NAME = "VeilVPN"
 APP_ENV = "production"
