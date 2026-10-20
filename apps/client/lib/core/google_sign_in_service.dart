@@ -42,8 +42,14 @@ class GoogleSignInUnavailable implements Exception {
 }
 
 /// True when at least one Google flow is configured in this build.
+///
+/// DISABLED 2026-10-20 at the owner's request ("comment it out for now,
+/// enable later — easy"): Google sign-in is paused. To re-enable, remove
+/// the leading `false &&` once the OAuth client IDs exist (Google Cloud
+/// setup is blocked until the account enables 2-Step Verification).
 bool get googleSignInConfigured =>
-    _webClientId.isNotEmpty || _desktopClientId.isNotEmpty;
+    // ignore: dead_code
+    false && (_webClientId.isNotEmpty || _desktopClientId.isNotEmpty);
 
 Future<String> googleIdToken() async {
   if (Platform.isAndroid || Platform.isIOS) return _mobileIdToken();

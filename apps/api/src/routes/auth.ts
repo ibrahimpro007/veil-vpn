@@ -33,6 +33,7 @@ import {
   verifyEmailHtml,
   resetPasswordHtml,
 } from "../util/email.js";
+import { isDisposableEmail } from "../util/disposable.js";
 import { issueSession, rotateRefresh } from "../auth/sessions.js";
 import {
   checkLoginAllowed,
@@ -61,6 +62,16 @@ export function registerAuthRoutes(app: App): void {
     const body = await c.req.json().catch(() => null);
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) return validationError(c, parsed.error.issues);
+    // Spam hardening: disposable/temp-mail domains are rejected outright —
+    // they account for most bulk fake signups.
+    if (isDisposableEmail(parsed.data.email)) {
+      return apiError(
+        c,
+        400,
+        "validation_error",
+        "Disposable email addresses are not allowed. Please use a real email address.",
+      );
+    }
     const db = makeDb(c.env.DB);
     const existing = await findUserByEmail(db, parsed.data.email);
     if (existing) {
@@ -147,6 +158,17 @@ export function registerAuthRoutes(app: App): void {
    * pre-verified email — Google already verified it.
    */
   app.post("/v1/auth/google", rateLimit("login", 30, 3600), async (c) => {
+    // DISABLED 2026-10-20 at the owner's request: Google sign-in is paused
+    // ("comment it out for now, enable later"). Flip GOOGLE_SIGNIN_ENABLED
+    // to "true" (and set GOOGLE_OAUTH_CLIENT_IDS) to enable.
+    if (c.env.GOOGLE_SIGNIN_ENABLED !== "true") {
+      return apiError(
+        c,
+        503,
+        "not_configured",
+        "Google sign-in is not configured on this server yet.",
+      );
+    }
     const body = await c.req.json().catch(() => null);
     const idToken = typeof body?.idToken === "string" ? body.idToken : "";
     if (!idToken) {

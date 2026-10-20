@@ -68,6 +68,11 @@ jobs:
             flutter create --platforms=windows --org com.veil --project-name veil_client .
           }
 
+      - name: Generate launcher icons (brand mark, not the Flutter default)
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+
       - name: flutter build windows --release
         run: >
           flutter build windows --release
@@ -158,6 +163,11 @@ jobs:
             find android -name "*.kts" -delete
           fi
 
+      - name: Generate launcher icons (brand mark, not the Flutter default)
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+
       - name: Write release keystore from secrets
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -216,6 +226,11 @@ jobs:
           if [ ! -d "macos/Runner.xcodeproj" ]; then
             flutter create --platforms=macos --org com.veil --project-name veil_client .
           fi
+
+      - name: Generate launcher icons (brand mark, not the Flutter default)
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
 
       - name: flutter build macos --release
         run: >
