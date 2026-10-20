@@ -31,7 +31,10 @@ function mockNodeAgent(calls: NodeCall[]) {
     init: Record<string, unknown> = {},
   ) => {
     const url = String(input);
-    if (url.startsWith("https://node1.test")) {
+    if (
+      url.startsWith("https://node1.test") ||
+      url.startsWith("http://node1.test:")
+    ) {
       const headers = (init.headers ?? {}) as Record<string, string>;
       calls.push({
         method: String(init.method ?? "GET"),

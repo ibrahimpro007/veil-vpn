@@ -8,3 +8,6 @@ build/
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Go build output
+apps/node-agent/node-agent

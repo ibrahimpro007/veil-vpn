@@ -42,7 +42,10 @@ function mockNodeDelete(calls: string[]) {
     init: Record<string, unknown> = {},
   ) => {
     const url = String(input);
-    if (url.startsWith("https://node1.test")) {
+    if (
+      url.startsWith("https://node1.test") ||
+      url.startsWith("http://node1.test:")
+    ) {
       calls.push(`${init.method} ${new URL(url).pathname}`);
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
