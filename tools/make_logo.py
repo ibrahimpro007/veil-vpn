@@ -3,7 +3,7 @@
 
 One master mark — a white shield with a gradient "V" cut into it, on a
 dark tile (app icon variant) or transparent (site variant) — exported to
-every size the site and client need. Drawn at 4x and downscaled for
+sizes the site and client need. Drawn at 4x and downscaled for
 smooth edges. Run: python3 tools/make_logo.py
 """
 from PIL import Image, ImageDraw, ImageFont
