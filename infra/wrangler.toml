@@ -30,6 +30,10 @@ id = "b5746582c1b7477d95b08c19c8064d31"
 # ---- Public (non-secret) vars ----
 [vars]
 ADMIN_LOGIN_SIMPLE = "true"
+# Google sign-in (enabled 2026-10-20; project veilvpn-app, consent in
+# Testing mode with luisswift123@gmail.com as test user).
+GOOGLE_SIGNIN_ENABLED = "true"
+GOOGLE_OAUTH_CLIENT_IDS = "855470494126-2q6jpq8pdk2ofcum386n78ft65lmvg8n.apps.googleusercontent.com,855470494126-v2h0pcdguf0kd7o3n5ng1cp8egkqifkp.apps.googleusercontent.com,855470494126-inc4ib8gjjen74tkk5ghn5f5j87m3c8e.apps.googleusercontent.com"
 APP_NAME = "VeilVPN"
 APP_ENV = "production"
 APP_URL = "https://veil-vpn-site.vercel.app"

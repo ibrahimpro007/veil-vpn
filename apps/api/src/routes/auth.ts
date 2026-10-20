@@ -158,9 +158,9 @@ export function registerAuthRoutes(app: App): void {
    * pre-verified email — Google already verified it.
    */
   app.post("/v1/auth/google", rateLimit("login", 30, 3600), async (c) => {
-    // DISABLED 2026-10-20 at the owner's request: Google sign-in is paused
-    // ("comment it out for now, enable later"). Flip GOOGLE_SIGNIN_ENABLED
-    // to "true" (and set GOOGLE_OAUTH_CLIENT_IDS) to enable.
+    // Google sign-in is gated by GOOGLE_SIGNIN_ENABLED (enabled 2026-10-20
+    // once the OAuth clients were created). Set it to anything but "true"
+    // to pause the endpoint without a code change.
     if (c.env.GOOGLE_SIGNIN_ENABLED !== "true") {
       return apiError(
         c,
