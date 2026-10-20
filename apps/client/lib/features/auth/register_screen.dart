@@ -88,6 +88,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         const SizedBox(height: 24),
         LoadingButton(
             busy: auth.busy, label: 'Create account', onPressed: _submit),
+        const GoogleSignInSection(),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

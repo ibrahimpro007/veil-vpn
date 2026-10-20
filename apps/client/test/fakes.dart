@@ -110,6 +110,12 @@ class FakeVeilApi implements VeilApiClient {
   }
 
   @override
+  @override
+  Future<AuthTokens> loginWithGoogle(String idToken) async {
+    return AuthTokens(
+        accessToken: 'fake-access', refreshToken: 'fake-refresh', expiresIn: 900);
+  }
+
   Future<AuthTokens> login(String email, String password) async {
     if (email == 'fail@example.com') {
       throw const AuthException(

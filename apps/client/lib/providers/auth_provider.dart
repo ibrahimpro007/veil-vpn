@@ -7,6 +7,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api_client.dart';
+import '../core/google_sign_in_service.dart';
 import '../core/models.dart';
 import '../core/secure_store.dart';
 import 'providers.dart';
@@ -135,6 +136,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
             ? AuthStage.authenticated
             : AuthStage.verifyEmail,
       );
+    } catch (e) {
+      _setError(e);
+    }
+  }
+
+  /// Google sign-in: obtains an ID token (native picker on mobile, browser
+  /// loopback on desktop) and exchanges it for a VeilVPN session.
+  Future<void> loginWithGoogle() async {
+    state = state.copyWith(busy: true, error: null);
+    try {
+      final idToken = await googleIdToken();
+      await _api.loginWithGoogle(idToken);
+      final user = await _api.getMe();
+      state = state.copyWith(
+        busy: false,
+        user: user,
+        pendingEmail: user.email,
+        stage: AuthStage.authenticated,
+      );
+    } on GoogleSignInCancelled {
+      state = state.copyWith(busy: false, error: null);
     } catch (e) {
       _setError(e);
     }

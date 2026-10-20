@@ -153,6 +153,7 @@ abstract class VeilApiClient {
   Future<({String userId, bool emailVerificationRequired})> register(
       String email, String password);
   Future<AuthTokens> login(String email, String password);
+  Future<AuthTokens> loginWithGoogle(String idToken);
   Future<AuthTokens> refresh(String refreshToken);
   Future<void> logout(String refreshToken);
   Future<bool> verifyEmail(String token);
@@ -230,6 +231,7 @@ class DioVeilApiClient implements VeilApiClient {
   static const _publicPaths = <String>{
     '/v1/auth/register',
     '/v1/auth/login',
+    '/v1/auth/google',
     '/v1/auth/refresh',
     '/v1/auth/verify-email',
     '/v1/auth/forgot-password',
@@ -433,6 +435,17 @@ class DioVeilApiClient implements VeilApiClient {
     return _call(() async {
       final r = await _dio.post('/v1/auth/login',
           data: {'email': email, 'password': password});
+      final tokens = AuthTokens.fromJson(_json(r));
+      await _store.writeTokens(
+          accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
+      return tokens;
+    });
+  }
+
+  @override
+  Future<AuthTokens> loginWithGoogle(String idToken) {
+    return _call(() async {
+      final r = await _dio.post('/v1/auth/google', data: {'idToken': idToken});
       final tokens = AuthTokens.fromJson(_json(r));
       await _store.writeTokens(
           accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);

@@ -32,6 +32,12 @@ permissions:
 env:
   API_BASE_URL: ${{ vars.API_BASE_URL || 'https://api.veil.example' }}
   GITHUB_REPO: ${{ vars.GITHUB_REPO || github.repository }}
+  # Google sign-in (optional — button hides when unset). Client IDs are
+  # repo vars; the desktop client secret is a repo secret (Google treats
+  # installed-app secrets as non-confidential, but we keep it out of git).
+  GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+  GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
+  GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
 
 jobs:
   windows:
@@ -68,6 +74,9 @@ jobs:
           --dart-define=API_BASE_URL=$env:API_BASE_URL
           --dart-define=FLAVOR=direct
           --dart-define=GITHUB_REPO=$env:GITHUB_REPO
+          --dart-define=GOOGLE_WEB_CLIENT_ID=$env:GOOGLE_WEB_CLIENT_ID
+          --dart-define=GOOGLE_DESKTOP_CLIENT_ID=$env:GOOGLE_DESKTOP_CLIENT_ID
+          --dart-define=GOOGLE_DESKTOP_CLIENT_SECRET=$env:GOOGLE_DESKTOP_CLIENT_SECRET
 
       - name: Build tunnel helper (dart compile exe)
         run: |
@@ -176,6 +185,7 @@ jobs:
           --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
           --dart-define=FLAVOR=direct
           --dart-define=GITHUB_REPO=${{ env.GITHUB_REPO }}
+          --dart-define=GOOGLE_WEB_CLIENT_ID=${{ env.GOOGLE_WEB_CLIENT_ID }}
 
       - name: Rename APK
         run: |
@@ -213,6 +223,8 @@ jobs:
           --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
           --dart-define=FLAVOR=direct
           --dart-define=GITHUB_REPO=${{ env.GITHUB_REPO }}
+          --dart-define=GOOGLE_DESKTOP_CLIENT_ID=${{ env.GOOGLE_DESKTOP_CLIENT_ID }}
+          --dart-define=GOOGLE_DESKTOP_CLIENT_SECRET=${{ env.GOOGLE_DESKTOP_CLIENT_SECRET }}
 
       - name: Ad-hoc codesign
         run: |

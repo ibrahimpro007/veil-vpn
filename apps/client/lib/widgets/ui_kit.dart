@@ -2,6 +2,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/google_sign_in_service.dart';
+import '../providers/auth_provider.dart';
 
 /// Email validation matching the server's `email` format expectation.
 bool isValidEmail(String v) =>
@@ -190,6 +194,61 @@ class FormScaffold extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "or" divider + Continue with Google button. Renders nothing when the
+/// build has no Google client IDs configured (keeps email-only builds
+/// clean). Used on the login and register screens.
+class GoogleSignInSection extends ConsumerWidget {
+  const GoogleSignInSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!googleSignInConfigured) return const SizedBox.shrink();
+    final auth = ref.watch(authProvider);
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Divider(color: scheme.outlineVariant)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text('or',
+                  style: TextStyle(color: scheme.onSurfaceVariant)),
+            ),
+            Expanded(child: Divider(color: scheme.outlineVariant)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 52),
+          ),
+          onPressed: auth.busy
+              ? null
+              : () => ref.read(authProvider.notifier).loginWithGoogle(),
+          child: auth.busy
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('G',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    SizedBox(width: 12),
+                    Text('Continue with Google'),
+                  ],
+                ),
+        ),
+      ],
     );
   }
 }

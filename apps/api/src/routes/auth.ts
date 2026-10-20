@@ -137,6 +137,90 @@ export function registerAuthRoutes(app: App): void {
     return c.json(tokens);
   });
 
+  /**
+   * POST /v1/auth/google — sign in with a Google ID token (client request,
+   * 2026-10-20). The token is verified by Google's tokeninfo endpoint
+   * (signature + expiry checked there); the audience must match one of the
+   * configured GOOGLE_OAUTH_CLIENT_IDS (comma-separated: web client ID for
+   * Android's serverClientId, desktop client ID for the Windows loopback
+   * flow). New users are created with a locked (unusable) password hash and
+   * pre-verified email — Google already verified it.
+   */
+  app.post("/v1/auth/google", rateLimit("login", 30, 3600), async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const idToken = typeof body?.idToken === "string" ? body.idToken : "";
+    if (!idToken) {
+      return apiError(c, 400, "validation_error", "idToken is required.");
+    }
+    const clientIds = (c.env.GOOGLE_OAUTH_CLIENT_IDS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (clientIds.length === 0) {
+      return apiError(
+        c,
+        503,
+        "not_configured",
+        "Google sign-in is not configured on this server yet.",
+      );
+    }
+    const verifyRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+    ).catch(() => null);
+    if (!verifyRes || !verifyRes.ok) {
+      return apiError(c, 401, "invalid_token", "Invalid Google token.");
+    }
+    const info = (await verifyRes.json().catch(() => null)) as {
+      aud?: string;
+      email?: string;
+      email_verified?: string;
+      name?: string;
+    } | null;
+    if (
+      !info ||
+      !info.aud ||
+      !clientIds.includes(info.aud) ||
+      info.email_verified !== "true" ||
+      !info.email
+    ) {
+      return apiError(
+        c,
+        401,
+        "invalid_token",
+        "Google token could not be verified for this app.",
+      );
+    }
+    const email = info.email.trim().toLowerCase();
+    const db = makeDb(c.env.DB);
+    let user = await findUserByEmail(db, email);
+    if (!user) {
+      user = await createUser(db, {
+        email,
+        passwordHash: `oauth-google:${crypto.randomUUID()}`,
+        name: info.name ?? null,
+      });
+      await setEmailVerified(db, user.id, nowSec());
+    }
+    if (user.status === "suspended") {
+      return apiError(
+        c,
+        403,
+        "account_suspended",
+        "This account has been suspended.",
+      );
+    }
+    if (user.status !== "active") {
+      return apiError(
+        c,
+        403,
+        "account_banned",
+        "This account is no longer active.",
+      );
+    }
+    const tokens = await issueSession(db, c.env, user.id);
+    return c.json(tokens);
+  });
+
   /** POST /v1/auth/refresh — rotate; reuse of a revoked token revokes the family. */
   app.post("/v1/auth/refresh", rateLimit("refresh", 60, 3600), async (c) => {
     const body = await c.req.json().catch(() => null);

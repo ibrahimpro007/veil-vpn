@@ -34,7 +34,7 @@ export interface Env {
   NODE_AGENT_PORT?: string;
   ADMIN_TOTP_ENC_KEY: string;
   ADMIN_LOGIN_SIMPLE?: string;
-  GOOGLE_OAUTH_CLIENT_ID?: string;
+  GOOGLE_OAUTH_CLIENT_IDS?: string;
 
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?: string;
   APPLE_APPSTORE_ISSUER_ID?: string;

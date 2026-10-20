@@ -76,6 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 24),
         LoadingButton(busy: auth.busy, label: 'Log in', onPressed: _submit),
+        const GoogleSignInSection(),
         const SizedBox(height: 8),
         TextButton(
           onPressed: () =>
