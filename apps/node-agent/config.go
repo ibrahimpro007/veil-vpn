@@ -98,10 +98,12 @@ func LoadConfig() (*Config, error) {
 
 	certPath := os.Getenv("AGENT_TLS_CERT")
 	keyPath := os.Getenv("AGENT_TLS_KEY")
-	if certPath == "" || keyPath == "" {
-		fail("AGENT_TLS_CERT and AGENT_TLS_KEY are required (self-signed cert is fine; the API pins its fingerprint)")
-	} else if _, err := tls.LoadX509KeyPair(certPath, keyPath); err != nil {
-		fail("cannot load TLS cert/key (%s, %s): %v", certPath, keyPath, err)
+	if (certPath == "") != (keyPath == "") {
+		fail("AGENT_TLS_CERT and AGENT_TLS_KEY must be set together (or neither, for HMAC-only HTTP mode)")
+	} else if certPath != "" {
+		if _, err := tls.LoadX509KeyPair(certPath, keyPath); err != nil {
+			fail("cannot load TLS cert/key (%s, %s): %v", certPath, keyPath, err)
+		}
 	}
 
 	poolCIDR := getenv("IP_POOL_CIDR", defaultPoolCIDR)

@@ -41,7 +41,14 @@ async function nodeFetch(
     path,
     rawBody,
   );
-  const res = await fetch(`https://${node.endpoint}${path}`, {
+  // node.endpoint is the WireGuard endpoint "host:wgPort" (UDP). The agent
+  // API lives on the same host, port NODE_AGENT_PORT (default 8443), over
+  // plain HTTP authenticated by the HMAC signature above — Workers fetch
+  // cannot accept the agent's self-signed IP certificate, so TLS is not
+  // usable here; payloads carry only peer public keys and tunnel IPs.
+  const host = node.endpoint.split(":")[0];
+  const agentPort = env.NODE_AGENT_PORT ?? "8443";
+  const res = await fetch(`http://${host}:${agentPort}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",

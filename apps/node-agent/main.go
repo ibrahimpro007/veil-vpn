@@ -102,15 +102,25 @@ func run() int {
 		}
 	}()
 
-	// --- HTTPS server (TLS always; the API pins the cert fingerprint) ---
-	cert, err := tls.LoadX509KeyPair(cfg.TLSCertPath, cfg.TLSKeyPath)
-	if err != nil {
-		// Already validated in LoadConfig; re-checked here to fail fast.
-		log.Error("cannot load TLS certificate", map[string]any{"error": err.Error()})
-		return 1
+	// --- HTTP(S) server ---
+	// With AGENT_TLS_CERT/KEY set: HTTPS (self-signed is fine when the caller
+	// can pin the fingerprint). Without them: plain HTTP — requests are still
+	// authenticated by HMAC signature (auth.go); used when the control plane
+	// (Cloudflare Workers fetch) cannot accept a self-signed IP certificate.
+	var ln net.Listener
+	if cfg.TLSCertPath != "" {
+		var cert tls.Certificate
+		cert, err = tls.LoadX509KeyPair(cfg.TLSCertPath, cfg.TLSKeyPath)
+		if err != nil {
+			// Already validated in LoadConfig; re-checked here to fail fast.
+			log.Error("cannot load TLS certificate", map[string]any{"error": err.Error()})
+			return 1
+		}
+		tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}
+		ln, err = tls.Listen("tcp", net.JoinHostPort(cfg.Bind, fmt.Sprint(cfg.Port)), tlsCfg)
+	} else {
+		ln, err = net.Listen("tcp", net.JoinHostPort(cfg.Bind, fmt.Sprint(cfg.Port)))
 	}
-	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}
-	ln, err := tls.Listen("tcp", net.JoinHostPort(cfg.Bind, fmt.Sprint(cfg.Port)), tlsCfg)
 	if err != nil {
 		log.Error("cannot bind listener", map[string]any{"error": err.Error()})
 		return 1

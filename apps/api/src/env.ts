@@ -31,6 +31,7 @@ export interface Env {
   LEMONSQUEEZY_STORE_ID: string;
 
   NODE_AGENT_HMAC_SECRET: string;
+  NODE_AGENT_PORT?: string;
   ADMIN_TOTP_ENC_KEY: string;
 
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?: string;

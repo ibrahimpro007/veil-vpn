@@ -77,9 +77,7 @@ Wants=wg-quick@wg0.service
 Type=simple
 User=root
 Environment=AGENT_HMAC_SECRET=$HMAC_SECRET
-Environment=AGENT_TLS_CERT=$AGENT_DIR/tls.crt
-Environment=AGENT_TLS_KEY=$AGENT_DIR/tls.key
-Environment=AGENT_NODE_ID=veil-node-1
+Environment=VEIL_NODE_ID=veil-node-1
 Environment=AGENT_PORT=8443
 ExecStart=$AGENT_DIR/veil-agent
 Restart=always
@@ -93,7 +91,11 @@ systemctl enable veil-agent > /dev/null 2>&1
 systemctl start veil-agent
 echo "[6/7] Agent service started"
 
-# 7. Open firewall ports (Ubuntu UFW, if active)
+# 7. Open firewall ports in host iptables (Oracle images REJECT non-SSH
+# input by default) and persist across reboots.
+iptables -C INPUT -p udp --dport 51820 -j ACCEPT 2>/dev/null || iptables -I INPUT -p udp --dport 51820 -j ACCEPT
+iptables -C INPUT -p tcp --dport 8443 -j ACCEPT 2>/dev/null || iptables -I INPUT -p tcp --dport 8443 -j ACCEPT
+netfilter-persistent save > /dev/null 2>&1 || true
 ufw allow 51820/udp > /dev/null 2>&1 || true
 ufw allow 8443/tcp > /dev/null 2>&1 || true
 
