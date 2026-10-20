@@ -66,7 +66,7 @@ Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/quiet /norestart"; \
 ; installer already has). /SILENT: skip the wizard checkbox page noise.
 Filename: "powershell.exe"; \
   Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install_helper.ps1"" -HelperExe ""{app}\{#HelperExe}"""; \
-  StatusMsg: "Installing VeilVPN helper service..."; Flags: runhidden
+  StatusMsg: "Installing VeilVPN helper service..."; Flags: runhidden waituntilterminated
 Filename: "{app}\{#AppExe}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]

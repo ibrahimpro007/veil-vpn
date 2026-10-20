@@ -288,6 +288,21 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release-assets/VeilVPN-*
+          fail_on_unmatched_files: true
+
+      - name: Verify release assets landed (v1.0.2 shipped exe-only, silently)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 10
+          assets=$(gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" --json assets --jq '[.assets[].name] | join(" ")')
+          echo "Release assets: $assets"
+          for expected in VeilVPN-Setup.exe VeilVPN.apk VeilVPN.dmg SHA256SUMS.txt; do
+            case " $assets " in
+              *" $expected "*) echo "OK: $expected" ;;
+              *) echo "::error::Release is missing asset: $expected"; exit 1 ;;
+            esac
+          done
           body: |
             ## VeilVPN ${{ github.ref_name }}
 
